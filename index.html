@@ -4,36 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Шашки Онлайн</title>
-    <!-- ИСПРАВЛЕНО: правильный скрипт Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ... ваши стили остаются без изменений ... */
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 15px; overflow: hidden; }
-        .header { margin-bottom: 25px; text-align: center; }
+        
+        /* Стили для стартового меню */
+        #menu-screen { display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10; }
+        .menu-btn { padding: 15px 30px; font-size: 18px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s; width: 250px; color: white; }
+        .menu-btn:active { transform: scale(0.95); }
+        .btn-easy { background: linear-gradient(135deg, #00b09b, #96c93d); box-shadow: 0 4px 15px rgba(0, 176, 155, 0.3); }
+        .btn-medium { background: linear-gradient(135deg, #f7971e, #ffd200); color: #1a1a1a; box-shadow: 0 4px 15px rgba(247, 151, 30, 0.3); }
+        .btn-hard { background: linear-gradient(135deg, #ff007f, #ff4b2b); box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3); }
+
+        /* Скрываем игровое поле, пока не выбрана сложность */
+        #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+
+        .header { margin-bottom: 15px; text-align: center; }
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+        
         .board-container { width: 100%; max-width: 360px; aspect-ratio: 1 / 1; background: linear-gradient(145deg, #161c26, #0f131a); padding: 8px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(79, 172, 254, 0.1); }
         .board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; border-radius: 10px; overflow: hidden; }
-        .cell { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .cell { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
         .light { background-color: #1e2633; }
         .dark { background-color: #131821; }
-        .piece { width: 78%; height: 78%; border-radius: 50%; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; }
+        
+        .piece { width: 78%; height: 78%; border-radius: 50%; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; z-index: 2; }
         .piece::after { content: ''; position: absolute; top: 10%; left: 15%; width: 70%; height: 35%; background: linear-gradient(to bottom, rgba(255,255,255,0.25), rgba(255,255,255,0)); border-radius: 50% / 40% 40% 0 0; }
         .piece:active { transform: scale(0.88); }
         .red-piece { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 12px rgba(255, 0, 127, 0.4); }
         .black-piece { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 12px rgba(0, 242, 254, 0.4); }
+        
+        /* Стиль для дамки (золотое кольцо) */
+        .king-piece { border: 3px solid #f1c40f !important; box-shadow: 0 0 15px #f1c40f !important; }
+        
+        /* Подсветка обязательного взятия */
+        .must-capture { box-shadow: 0 0 15px #ff0000 inset; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1 id="player-name">Шашки Арена 🏆</h1>
-        <div id="status">Твой ход! Нажми на красную шашку</div>
+    <!-- Стартовое меню выбора сложности -->
+    <div id="menu-screen">
+        <h1 style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 28px; margin-bottom: 20px;">Выбери сложность</h1>
+        <button class="menu-btn btn-easy" onclick="startGame('easy')">🟢 Легко</button>
+        <button class="menu-btn btn-medium" onclick="startGame('medium')">🟡 Средне</button>
+        <button class="menu-btn btn-hard" onclick="startGame('hard')">🔴 Сложно</button>
     </div>
 
-    <div class="board-container">
-        <div class="board" id="game-board"></div>
+    <!-- Игровой экран -->
+    <div id="game-screen">
+        <div class="header">
+            <h1 id="player-name">Шашки Арена 🏆</h1>
+            <div id="status">Твой ход!</div>
+        </div>
+        <div class="board-container">
+            <div class="board" id="game-board"></div>
+        </div>
     </div>
 
     <script>
@@ -44,10 +72,15 @@
         const boardElement = document.getElementById('game-board');
         const statusElement = document.getElementById('status');
         const nameElement = document.getElementById('player-name');
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
 
         let selectedPiece = null;
-        let isPlayerTurn = true; // НОВОЕ: флаг, чей сейчас ход
+        let isPlayerTurn = true;
+        let currentDifficulty = 'easy';
+        let boardState = []; // Двумерный массив для хранения логики доски
 
+        // Инициализация имени пользователя
         try {
             if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
@@ -58,8 +91,21 @@
             nameElement.innerText = "Игрок 👑";
         }
 
+        // Запуск игры после выбора сложности
+        function startGame(difficulty) {
+            currentDifficulty = difficulty;
+            menuScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            createBoard();
+            statusElement.innerText = "Твой ход! Нажми на красную шашку";
+            isPlayerTurn = true;
+        }
+
+        // Создание доски и начальной расстановки
         function createBoard() {
-            boardElement.innerHTML = ''; 
+            boardElement.innerHTML = '';
+            boardState = Array(8).fill(null).map(() => Array(8).fill(null));
+
             for (let row = 0; row < 8; row++) {
                 for (let col = 0; col < 8; col++) {
                     const cell = document.createElement('div');
@@ -67,22 +113,15 @@
                     cell.dataset.row = row;
                     cell.dataset.col = col;
 
-                    cell.addEventListener('click', (e) => {
-                        // НОВОЕ: ходить можно только если сейчас ход игрока
-                        if (!isPlayerTurn) return;
-                        // НОВОЕ: ходить можно только красной шашкой
-                        if (selectedPiece && cell.classList.contains('dark') && !cell.hasChildNodes() && selectedPiece.classList.contains('red-piece')) {
-                            movePiece(selectedPiece, cell);
-                        }
-                    });
+                    cell.addEventListener('click', (e) => handleCellClick(row, col, cell));
                     
                     if ((row + col) % 2 !== 0) {
                         if (row < 3) {
-                            const piece = createPiece('piece black-piece');
-                            cell.appendChild(piece);
+                            boardState[row][col] = 'black';
+                            cell.appendChild(createPiece('black-piece', row, col));
                         } else if (row > 4) {
-                            const piece = createPiece('piece red-piece');
-                            cell.appendChild(piece);
+                            boardState[row][col] = 'red';
+                            cell.appendChild(createPiece('red-piece', row, col));
                         }
                     }
                     boardElement.appendChild(cell);
@@ -90,26 +129,27 @@
             }
         }
 
-        // НОВОЕ: вынес логику хода в отдельную функцию
-        function movePiece(piece, cell) {
-            cell.appendChild(piece);
-            piece.style.border = "1px solid rgba(255, 255, 255, 0.2)";
-            selectedPiece = null;
-            isPlayerTurn = false; // Передаем ход боту
-            statusElement.innerText = "Ход бота... 🤖";
-            
-            // Запускаем ход бота с небольшой задержкой для реализма
-            setTimeout(botMove, 800); 
-        }
-
-        function createPiece(className) {
+        function createPiece(className, row, col) {
             const piece = document.createElement('div');
-            piece.className = className;
+            piece.className = `piece ${className}`;
+            piece.dataset.row = row;
+            piece.dataset.col = col;
 
             piece.addEventListener('click', (e) => {
                 e.stopPropagation(); 
-                // НОВОЕ: выбирать можно только свои (красные) шашки и только в свой ход
-                if (!isPlayerTurn || !piece.classList.contains('red-piece')) return;
+                if (!isPlayerTurn) return;
+                // Игрок может выбирать только красные шашки
+                if (!piece.classList.contains('red-piece')) return;
+
+                // Проверяем, есть ли обязательное взятие. Если есть, но выбрана не та шашка - ругаемся.
+                const captures = getAllCaptures('red');
+                if (captures.length > 0) {
+                    const isThisPieceCapturing = captures.some(c => c.fromRow === row && c.fromCol === col);
+                    if (!isThisPieceCapturing) {
+                        statusElement.innerText = "Есть обязательное взятие! Выбери другую шашку.";
+                        return;
+                    }
+                }
 
                 if (selectedPiece) {
                     selectedPiece.style.border = "1px solid rgba(255, 255, 255, 0.2)";
@@ -122,44 +162,333 @@
             return piece;
         }
 
-        // НОВОЕ: Простой AI для бота
-        function botMove() {
-            const allBlackPieces = document.querySelectorAll('.black-piece');
-            const allDarkCells = Array.from(document.querySelectorAll('.cell.dark'));
+        // Обработка клика по клетке
+        function handleCellClick(row, col, cell) {
+            if (!isPlayerTurn || !selectedPiece) return;
+            if (boardState[row][col] !== null) return; // Клетка занята
 
-            // Собираем возможные ходы: шашка + пустая клетка
-            let possibleMoves = [];
-            allBlackPieces.forEach(piece => {
-                const pieceCell = piece.parentElement;
-                const pieceRow = parseInt(pieceCell.dataset.row);
-                const pieceCol = parseInt(pieceCell.dataset.col);
+            const fromRow = parseInt(selectedPiece.dataset.row);
+            const fromCol = parseInt(selectedPiece.dataset.col);
 
-                allDarkCells.forEach(targetCell => {
-                    if (targetCell.hasChildNodes()) return; // Клетка занята
-                    const targetRow = parseInt(targetCell.dataset.row);
-                    const targetCol = parseInt(targetCell.dataset.col);
+            // Проверяем, является ли выбранная шашка дамкой
+            const isKing = selectedPiece.classList.contains('king-piece');
 
-                    // Простое правило: бот может ходить на одну клетку по диагонали вниз (для черных)
-                    if (targetRow === pieceRow + 1 && (targetCol === pieceCol - 1 || targetCol === pieceCol + 1)) {
-                        possibleMoves.push({ piece, targetCell });
-                    }
-                });
-            });
-
-            if (possibleMoves.length > 0) {
-                // Выбираем случайный ход из возможных
-                const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                randomMove.targetCell.appendChild(randomMove.piece);
+            // 1. Проверка обычного хода (на 1 клетку)
+            let isSimpleMove = false;
+            if (!isKing) {
+                if (Math.abs(row - fromRow) === 1 && Math.abs(col - fromCol) === 1) {
+                    // Красные ходят вверх (row уменьшается)
+                    if (row === fromRow - 1) isSimpleMove = true;
+                }
             } else {
-                statusElement.innerText = "Боту некуда ходить!";
+                // Дамка ходит на любое расстояние по диагонали
+                if (Math.abs(row - fromRow) === Math.abs(col - fromCol) && row !== fromRow) {
+                    // Проверяем, что путь свободен
+                    if (isPathClear(fromRow, fromCol, row, col)) isSimpleMove = true;
+                }
             }
 
-            // Возвращаем ход игроку
+            // 2. Проверка взятия (рубки)
+            const capture = getCaptureForPiece(fromRow, fromCol, row, col, isKing);
+            
+            // Если есть обязательное взятие где-то на доске, но игрок пытается сделать простой ход - запрещаем
+            const allCaptures = getAllCaptures('red');
+            if (allCaptures.length > 0 && !capture) {
+                statusElement.innerText = "Есть обязательное взятие! Ты должен рубить.";
+                return;
+            }
+
+            if (capture) {
+                // Выполняем взятие
+                executeCapture(fromRow, fromCol, row, col, capture);
+            } else if (isSimpleMove) {
+                // Выполняем простой ход
+                executeMove(fromRow, fromCol, row, col);
+            } else {
+                statusElement.innerText = "Так ходить нельзя!";
+            }
+        }
+
+        // Проверка, свободен ли путь для дамки
+        function isPathClear(fromRow, fromCol, toRow, toCol) {
+            const rowStep = Math.sign(toRow - fromRow);
+            const colStep = Math.sign(toCol - fromCol);
+            let r = fromRow + rowStep;
+            let c = fromCol + colStep;
+            while (r !== toRow && c !== toCol) {
+                if (boardState[r][c] !== null) return false;
+                r += rowStep;
+                c += colStep;
+            }
+            return true;
+        }
+
+        // Получить все возможные взятия для стороны (red/black)
+        function getAllCaptures(color) {
+            let captures = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (boardState[r][c] === color) {
+                        const isKing = document.querySelector(`[data-row="${r}"][data-col="${c}"]`).classList.contains('king-piece');
+                        // Ищем врагов вокруг
+                        const enemyColor = color === 'red' ? 'black' : 'red';
+                        const directions = [[-1,-1], [-1,1], [1,-1], [1,1]];
+                        
+                        for (let [dr, dc] of directions) {
+                            let r1 = r + dr, c1 = c + dc;
+                            let r2 = r + 2*dr, c2 = c + 2*dc;
+                            
+                            if (!isKing) {
+                                // Обычная шашка бьет на 1 клетку
+                                if (r2 >= 0 && r2 < 8 && c2 >= 0 && c2 < 8) {
+                                    if (boardState[r1] && boardState[r1][c1] === enemyColor && boardState[r2][c2] === null) {
+                                        captures.push({ fromRow: r, fromCol: c, toRow: r2, toCol: c2, capturedRow: r1, capturedCol: c1 });
+                                    }
+                                }
+                            } else {
+                                // Дамка бьет на любое расстояние
+                                let dist = 1;
+                                while (true) {
+                                    let nr = r + dr * dist;
+                                    let nc = c + dc * dist;
+                                    if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break;
+                                    if (boardState[nr][nc] === null) {
+                                        dist++;
+                                        continue;
+                                    }
+                                    // Нашли фигуру
+                                    if (boardState[nr][nc] === enemyColor) {
+                                        // Проверяем клетку за ней
+                                        let tr = nr + dr;
+                                        let tc = nc + dc;
+                                        if (tr >= 0 && tr < 8 && tc >= 0 && tc < 8 && boardState[tr][tc] === null) {
+                                            captures.push({ fromRow: r, fromCol: c, toRow: tr, toCol: tc, capturedRow: nr, capturedCol: nc });
+                                        }
+                                    }
+                                    break; // Дальше смотреть нельзя
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return captures;
+        }
+
+        // Получить взятие для конкретного хода
+        function getCaptureForPiece(fromRow, fromCol, toRow, toCol, isKing) {
+            const all = getAllCaptures(boardState[fromRow][fromCol]);
+            return all.find(c => c.toRow === toRow && c.toCol === toCol);
+        }
+
+        // Выполнить простой ход
+        function executeMove(fromRow, fromCol, toRow, toCol) {
+            const piece = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
+            const targetCell = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
+            
+            targetCell.appendChild(piece);
+            piece.dataset.row = toRow;
+            piece.dataset.col = toCol;
+            boardState[toRow][toCol] = boardState[fromRow][fromCol];
+            boardState[fromRow][fromCol] = null;
+            
+            // Проверка на дамку
+            checkPromotion(piece, toRow, boardState[toRow][toCol]);
+            
+            selectedPiece.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+            selectedPiece = null;
+            endTurn();
+        }
+
+        // Выполнить взятие
+        function executeCapture(fromRow, fromCol, toRow, toCol, capture) {
+            const piece = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
+            const targetCell = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
+            const enemyPiece = document.querySelector(`[data-row="${capture.capturedRow}"][data-col="${capture.capturedCol}"]`);
+            
+            // Удаляем врага
+            if (enemyPiece) enemyPiece.remove();
+            boardState[capture.capturedRow][capture.capturedCol] = null;
+            
+            // Двигаем свою шашку
+            targetCell.appendChild(piece);
+            piece.dataset.row = toRow;
+            piece.dataset.col = toCol;
+            boardState[toRow][toCol] = boardState[fromRow][fromCol];
+            boardState[fromRow][fromCol] = null;
+
+            // Проверка на дамку
+            checkPromotion(piece, toRow, boardState[toRow][toCol]);
+
+            selectedPiece.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+            selectedPiece = null;
+
+            // Проверяем, может ли эта же шашка бить дальше (цепное взятие)
+            const furtherCaptures = getAllCaptures(boardState[toRow][toCol]).filter(c => c.fromRow === toRow && c.fromCol === toCol);
+            if (furtherCaptures.length > 0) {
+                // Если может - ход не заканчивается, игрок должен бить дальше этой же шашкой
+                selectedPiece = piece;
+                piece.style.border = "3px solid #f1c40f";
+                statusElement.innerText = "Продолжай рубить этой же шашкой!";
+                // Бот в это время не ходит
+            } else {
+                endTurn();
+            }
+        }
+
+        // Проверка превращения в дамку
+        function checkPromotion(piece, row, color) {
+            if (color === 'red' && row === 0) {
+                piece.classList.add('king-piece');
+            } else if (color === 'black' && row === 7) {
+                piece.classList.add('king-piece');
+            }
+        }
+
+        // Завершение хода игрока и запуск бота
+        function endTurn() {
+            isPlayerTurn = false;
+            statusElement.innerText = "Ход бота... 🤖";
+            setTimeout(botMove, 500);
+        }
+
+        // ================= ЛОГИКА БОТА =================
+        function botMove() {
+            // Проверяем, не закончилась ли игра
+            if (checkGameOver()) return;
+
+            const allCaptures = getAllCaptures('black');
+            let moves = [];
+
+            if (allCaptures.length > 0) {
+                // Обязательное взятие
+                moves = allCaptures;
+            } else {
+                // Обычные ходы
+                moves = getAllSimpleMoves('black');
+            }
+
+            if (moves.length === 0) {
+                statusElement.innerText = "Боту некуда ходить! Ты победил! 🎉";
+                isPlayerTurn = true;
+                return;
+            }
+
+            let chosenMove;
+            if (currentDifficulty === 'easy') {
+                // Легко: случайный ход
+                chosenMove = moves[Math.floor(Math.random() * moves.length)];
+            } else if (currentDifficulty === 'medium') {
+                // Средне: предпочитает взятия, иначе случайный
+                const captures = moves.filter(m => m.capturedRow !== undefined);
+                chosenMove = captures.length > 0 ? captures[Math.floor(Math.random() * captures.length)] : moves[Math.floor(Math.random() * moves.length)];
+            } else {
+                // Сложно: предпочитает взятия и продвижение вперед (минимизирует расстояние до красных)
+                // Простая эвристика: выбираем ход, который максимизирует "полезность"
+                const scoredMoves = moves.map(m => {
+                    let score = 0;
+                    if (m.capturedRow !== undefined) score += 100; // Взятие - приоритет
+                    // Продвижение к низу (для черных row увеличивается)
+                    score += m.toRow * 2; 
+                    // Близость к центру
+                    score -= Math.abs(3.5 - m.toCol); 
+                    return { ...m, score };
+                });
+                scoredMoves.sort((a, b) => b.score - a.score);
+                chosenMove = scoredMoves[0];
+            }
+
+            // Выполняем ход бота
+            executeBotMove(chosenMove);
+        }
+
+        // Получить все простые ходы для цвета
+        function getAllSimpleMoves(color) {
+            let moves = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (boardState[r][c] === color) {
+                        const isKing = document.querySelector(`[data-row="${r}"][data-col="${c}"]`).classList.contains('king-piece');
+                        const directions = color === 'black' ? [[1,-1], [1,1]] : [[-1,-1], [-1,1]];
+                        
+                        if (isKing) {
+                            // Дамка ходит на любое расстояние
+                            for (let [dr, dc] of [[-1,-1], [-1,1], [1,-1], [1,1]]) {
+                                let dist = 1;
+                                while (true) {
+                                    let nr = r + dr * dist;
+                                    let nc = c + dc * dist;
+                                    if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break;
+                                    if (boardState[nr][nc] === null) {
+                                        moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc });
+                                        dist++;
+                                    } else break;
+                                }
+                            }
+                        } else {
+                            for (let [dr, dc] of directions) {
+                                let nr = r + dr;
+                                let nc = c + dc;
+                                if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && boardState[nr][nc] === null) {
+                                    moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return moves;
+        }
+
+        // Выполнить ход бота (упрощенная версия, без цепных взятий для простоты)
+        function executeBotMove(move) {
+            const piece = document.querySelector(`[data-row="${move.fromRow}"][data-col="${move.fromCol}"]`);
+            const targetCell = document.querySelector(`[data-row="${move.toRow}"][data-col="${move.toCol}"]`);
+
+            if (move.capturedRow !== undefined) {
+                const enemyPiece = document.querySelector(`[data-row="${move.capturedRow}"][data-col="${move.capturedCol}"]`);
+                if (enemyPiece) enemyPiece.remove();
+                boardState[move.capturedRow][move.capturedCol] = null;
+            }
+
+            targetCell.appendChild(piece);
+            piece.dataset.row = move.toRow;
+            piece.dataset.col = move.toCol;
+            boardState[move.toRow][move.toCol] = boardState[move.fromRow][move.fromCol];
+            boardState[move.fromRow][move.fromCol] = null;
+
+            checkPromotion(piece, move.toRow, boardState[move.toRow][move.toCol]);
+
+            // Проверка на победу бота (если красных не осталось)
+            if (checkGameOver()) return;
+
+            // Если у бота есть цепное взятие - он должен бить дальше, но для простоты мы 
+            // просто передадим ход игроку. В идеале нужно рекурсивно проверять.
+            
             isPlayerTurn = true;
             statusElement.innerText = "Твой ход! Нажми на красную шашку";
         }
 
-        createBoard();
+        // Проверка окончания игры
+        function checkGameOver() {
+            const reds = document.querySelectorAll('.red-piece').length;
+            const blacks = document.querySelectorAll('.black-piece').length;
+            
+            if (reds === 0) {
+                statusElement.innerText = "Ты проиграл! 🤖 Победил бот.";
+                isPlayerTurn = false;
+                return true;
+            }
+            if (blacks === 0) {
+                statusElement.innerText = "Ты победил! 🎉 Бот повержен.";
+                isPlayerTurn = false;
+                return true;
+            }
+            return false;
+        }
+
+        // Чтобы функции были доступны из HTML (onclick)
+        window.startGame = startGame;
     </script>
 </body>
 </html>
