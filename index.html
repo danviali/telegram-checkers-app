@@ -153,25 +153,33 @@
 
             async function fetchState() {
                 if (isGameOver) return;
+                
+                // Показываем на экране, что мы пытаемся подключиться
+                waitingTitle.innerText = "Попытка связи...";
+                waitingText.innerText = "Ссылка: " + SERVER_URL + " | Комната: " + roomId;
+
                 try {
                     const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
                         headers: { "ngrok-skip-browser-warning": "true" }
                     });
                     
+                    // Если сервер вернул ошибку
                     if (!res.ok) {
-                        const errText = await res.text();
                         waitingTitle.innerText = "Ошибка " + res.status;
-                        waitingText.innerText = errText.substring(0, 100);
+                        waitingText.innerText = "Сервер ответил: " + res.statusText;
                         return;
                     }
 
                     const data = await res.json();
+                    
+                    // Если в данных есть ошибка
                     if (data.error) { 
                         waitingTitle.innerText = "Ошибка данных";
                         waitingText.innerText = data.error;
                         return; 
                     }
                     
+                    // Если всё хорошо — показываем доску!
                     onlineBoard = data.board;
                     onlineTurn = data.turn;
                     isPlayerTurn = (onlineTurn === 'white' && myColor === 'white') || (onlineTurn === 'black' && myColor === 'black');
@@ -184,10 +192,12 @@
                         updateOnlineBoard();
                     }
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
+                    
                 } catch (e) {
-                    console.error("Ошибка связи с сервером:", e);
+                    // Если сеть недоступна (например, ngrok не отвечает)
+                    console.error("Ошибка:", e);
                     waitingTitle.innerText = "Ошибка сети!";
-                    waitingText.innerText = "Проверь консоль (F12) и ngrok";
+                    waitingText.innerText = "Проверьте: " + SERVER_URL;
                 }
             }
             fetchState();
