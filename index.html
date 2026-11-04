@@ -38,6 +38,20 @@
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; }
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
+        
+        /* Таймер */
+        #timer-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #f1c40f;
+            font-weight: 700;
+            z-index: 20;
+        }
 
         #game-over-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 14, 20, 0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
         #game-over-text { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 20px; }
@@ -87,6 +101,7 @@
         <div class="header">
             <h1 id="player-name">Шашки Арена 🏆</h1>
             <div id="status">Твой ход!</div>
+            <div id="timer-display">03:00</div>
         </div>
         <div class="board-container" id="board-container">
             <div class="board" id="game-board"></div>
@@ -124,8 +139,8 @@
         const gameOverScreen = document.getElementById('game-over-screen');
         const gameOverText = document.getElementById('game-over-text');
         const helperCheckbox = document.getElementById('helper-checkbox');
+        const timerDisplay = document.getElementById('timer-display');
 
-        // Элементы для вывода ошибок
         const waitingTitle = document.getElementById('waiting-title');
         const waitingText = document.getElementById('waiting-text');
 
@@ -135,6 +150,11 @@
         let board = []; 
         let isGameOver = false;
         let cellsDOM = []; 
+        
+        // Таймер
+        let turnTimer = null;
+        const TURN_TIME = 180; // 3 минуты в секундах
+        let timeLeft = TURN_TIME;
 
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
@@ -143,7 +163,7 @@
         } catch (e) {}
 
         // ==========================================
-        // ЛОГИКА ОНЛАЙН-РЕЖИМА (с диагностикой)
+        // ЛОГИКА ОНЛАЙН-РЕЖИМА
         // ==========================================
         if (isOnlineMode) {
             menuScreen.style.display = 'none';
@@ -154,16 +174,11 @@
             async function fetchState() {
                 if (isGameOver) return;
                 
-                // Показываем на экране, что мы пытаемся подключиться
-                waitingTitle.innerText = "Попытка связи...";
-                waitingText.innerText = "Ссылка: " + SERVER_URL + " | Комната: " + roomId;
-
                 try {
                     const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
                         headers: { "ngrok-skip-browser-warning": "true" }
                     });
                     
-                    // Если сервер вернул ошибку
                     if (!res.ok) {
                         waitingTitle.innerText = "Ошибка " + res.status;
                         waitingText.innerText = "Сервер ответил: " + res.statusText;
@@ -172,14 +187,12 @@
 
                     const data = await res.json();
                     
-                    // Если в данных есть ошибка
                     if (data.error) { 
                         waitingTitle.innerText = "Ошибка данных";
                         waitingText.innerText = data.error;
                         return; 
                     }
                     
-                    // Если всё хорошо — показываем доску!
                     onlineBoard = data.board;
                     onlineTurn = data.turn;
                     isPlayerTurn = (onlineTurn === 'white' && myColor === 'white') || (onlineTurn === 'black' && myColor === 'black');
@@ -189,23 +202,79 @@
                         gameScreen.style.display = 'flex';
                         initOnlineBoard();
                     } else {
-                        updateOnlineBoard();
+                        updateOnlineBoard(); 
                     }
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
                     
+                    // Управление таймером при смене хода
+                    if (isPlayerTurn && !turnTimer) {
+                        startTimer();
+                    } else if (!isPlayerTurn && turnTimer) {
+                        clearInterval(turnTimer);
+                        turnTimer = null;
+                        timerDisplay.innerText = "00:00";
+                    }
+                    
                 } catch (e) {
-                    // Если сеть недоступна (например, ngrok не отвечает)
                     console.error("Ошибка:", e);
                     waitingTitle.innerText = "Ошибка сети!";
                     waitingText.innerText = "Проверьте: " + SERVER_URL;
                 }
             }
             fetchState();
-            setInterval(fetchState, 1500);
+            setInterval(fetchState, 1000);
         } else {
             menuScreen.style.display = 'flex';
         }
 
+        // --- ТАЙМЕР ---
+        function startTimer() {
+            timeLeft = TURN_TIME;
+            updateTimerDisplay();
+            if (turnTimer) clearInterval(turnTimer);
+            turnTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(turnTimer);
+                    turnTimer = null;
+                    // Время вышло — отправляем запрос на сервер, чтобы передать ход
+                    statusElement.innerText = "Время вышло! Ход переходит...";
+                    sendTimeoutToServer();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            // Меняем цвет, если осталось меньше 30 секунд
+            if (timeLeft < 30) {
+                timerDisplay.style.color = "#ff4b2b";
+            } else {
+                timerDisplay.style.color = "#f1c40f";
+            }
+        }
+
+        async function sendTimeoutToServer() {
+            try {
+                const res = await fetch(`${SERVER_URL}/api/timeout`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        "ngrok-skip-browser-warning": "true"
+                    },
+                    body: JSON.stringify({ room: roomId, player_id: myPlayerId })
+                });
+                const data = await res.json();
+                if (data.error) { statusElement.innerText = "Ошибка: " + data.error; return; }
+                // После таймаута сразу обновляем состояние
+                setTimeout(fetchState, 300);
+            } catch (e) { console.error(e); }
+        }
+
+        // --- ОТРИСОВКА ---
         function initOnlineBoard() {
             boardElement.innerHTML = '';
             board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -224,11 +293,12 @@
                     cellsDOM[r][c] = cell;
                 }
             }
-            updateOnlineBoard();
+            updateOnlineBoard(true);
         }
 
-        function updateOnlineBoard() {
+        function updateOnlineBoard(forceRedraw = false) {
             if (!onlineBoard) return;
+            
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     let val = onlineBoard[r][c];
@@ -240,7 +310,39 @@
                     board[r][c] = type;
                 }
             }
-            renderAllPieces();
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = cellsDOM[r][c];
+                    const piece = cell.querySelector('.piece');
+                    const type = board[r][c];
+
+                    if (type) {
+                        if (!piece || forceRedraw) {
+                            if (piece) piece.remove();
+                            createPieceDOM(r, c, type);
+                        } else {
+                            const colorClass = (type.toLowerCase() === 'r') ? 'red-piece' : 'black-piece';
+                            piece.className = `piece ${colorClass}`;
+                            if (type === 'R' || type === 'B') {
+                                piece.classList.add('king-piece');
+                            }
+                        }
+                    } else {
+                        if (piece) piece.remove();
+                    }
+                }
+            }
+            updatePiecesVisuals();
+        }
+
+        function movePieceDOM(fR, fC, tR, tC) {
+            const piece = cellsDOM[fR][fC].querySelector('.piece');
+            if (piece) {
+                cellsDOM[tR][tC].appendChild(piece);
+                piece.dataset.row = tR;
+                piece.dataset.col = tC;
+            }
         }
 
         function onCellClickOnline(r, c) {
@@ -260,7 +362,11 @@
             if (selectedCell && !board[r][c]) {
                 const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c);
                 const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
-                if (targetMove) { clearHints(); sendMoveToServer(targetMove); }
+                if (targetMove) { 
+                    clearHints(); 
+                    movePieceDOM(selectedCell.r, selectedCell.c, r, c);
+                    sendMoveToServer(targetMove); 
+                }
                 else { selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Так ходить нельзя."; }
             }
         }
@@ -277,14 +383,19 @@
                 });
                 const data = await res.json();
                 if (data.error) { statusElement.innerText = "Ошибка: " + data.error; return; }
-                selectedCell = null; isPlayerTurn = false; statusElement.innerText = "Ход отправлен...";
-                setTimeout(fetchState, 300);
+                selectedCell = null; 
+                isPlayerTurn = false; 
+                statusElement.innerText = "Ход отправлен...";
+                
+                // Сбрасываем таймер, так как ход сделан
+                if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
+                timerDisplay.innerText = "00:00";
+                
+                setTimeout(fetchState, 500);
             } catch (e) { console.error(e); }
         }
 
-        // ==========================================
-        // ОБЩИЕ ФУНКЦИИ (ИГРА С БОТОМ И ОНЛАЙН)
-        // ==========================================
+        // --- ОБЩИЕ ФУНКЦИИ ---
         function startGame(difficulty) {
             currentDifficulty = difficulty; 
             menuScreen.style.display = 'none'; 
@@ -304,6 +415,7 @@
             gameOverScreen.style.display = 'none'; 
             menuScreen.style.display = 'flex'; 
             isGameOver = true; 
+            if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
         }
 
         function restartGame() { 
@@ -340,22 +452,22 @@
             const piece = document.createElement('div');
             piece.className = `piece ${type.toLowerCase() === 'r' ? 'red-piece' : 'black-piece'}`;
             if (type === 'R' || type === 'B') piece.classList.add('king-piece');
-            cellsDOM[r][c].appendChild(piece);
+            piece.dataset.row = r;
+            piece.dataset.col = c;
+            
+            // Обработчик клика по шашке
             piece.addEventListener('click', (e) => { 
                 e.stopPropagation(); 
                 if (isOnlineMode) onCellClickOnline(r, c); 
                 else onCellClick(r, c); 
             });
+            
+            cellsDOM[r][c].appendChild(piece);
         }
 
         function removePieceDOM(r, c) { 
             const p = cellsDOM[r][c].querySelector('.piece'); 
             if (p) { p.classList.add('fade-out'); setTimeout(() => p.remove(), 300); } 
-        }
-
-        function movePieceDOM(fR, fC, tR, tC) { 
-            const p = cellsDOM[fR][fC].querySelector('.piece'); 
-            if (p) cellsDOM[tR][tC].appendChild(p); 
         }
 
         function updatePiecesVisuals() {
@@ -607,6 +719,7 @@
             gameOverText.innerText = text; 
             gameOverText.style.color = isWin ? "#2ecc71" : "#ff4b2b"; 
             gameOverScreen.style.display = 'flex';
+            if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
         }
 
         helperCheckbox.addEventListener('change', () => { 
