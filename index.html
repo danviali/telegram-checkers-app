@@ -102,6 +102,7 @@
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
 
+        // 🔥 ВАЖНО: Ссылка из ngrok должна быть обновлена после запуска ngrok http 8081
         const SERVER_URL = "https://similarly-discount-viability.ngrok-free.dev";
         
         const urlParams = new URLSearchParams(window.location.search);
