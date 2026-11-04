@@ -31,6 +31,12 @@
         .helper-toggle input:checked ~ .checkmark::after { opacity: 1; }
         .helper-label { font-size: 14px; font-weight: 600; color: #c9d1d9; }
 
+        /* --- ЭКРАН ОЖИДАНИЯ ОНЛАЙН --- */
+        #waiting-screen { display: none; flex-direction: column; align-items: center; gap: 20px; z-index: 10; width: 100%; text-align: center; }
+        #waiting-screen h2 { font-size: 24px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #4facfe; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         
@@ -58,33 +64,27 @@
             width: 100%; height: 100%; border-radius: 8px; overflow: hidden; 
         }
         
-        /* Клетка теперь является контейнером для шашки */
         .cell { 
             width: 100%; height: 100%; 
             position: relative; 
             display: flex; align-items: center; justify-content: center;
-            /* Клики по клетке (для пустых мест) */
             cursor: pointer;
         }
         
         .light { background-color: #1e2633; }
         .dark { background-color: #131821; }
 
-        /* --- ШАШКИ (ВНУТРИ КЛЕТКИ) --- */
         .piece { 
             width: 78%; 
             height: 78%; 
             border-radius: 50%; 
             position: absolute;
-            /* Плавная анимация */
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-            /* Шашка ловит клики */
             pointer-events: auto;
             cursor: pointer;
             z-index: 2;
         }
         
-        /* Эффект нажатия */
         .piece:active { transform: scale(0.9); }
         .red-piece { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); box-shadow: 0 4px 10px rgba(255, 0, 127, 0.4); border: 1px solid rgba(255,255,255,0.2); }
         .black-piece { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); box-shadow: 0 4px 10px rgba(0, 242, 254, 0.4); border: 1px solid rgba(255,255,255,0.2); }
@@ -98,6 +98,7 @@
 </head>
 <body>
 
+    <!-- Меню выбора сложности для игры с ботом -->
     <div id="menu-screen">
         <h1 style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 28px; margin-bottom: 20px;">Выбери сложность</h1>
         <button class="menu-btn btn-easy" onclick="startGame('easy')">🟢 Легко</button>
@@ -111,6 +112,15 @@
         </label>
     </div>
 
+    <!-- Экран ожидания для онлайн-режима -->
+    <div id="waiting-screen">
+        <div class="spinner"></div>
+        <h2>Ожидание подключения...</h2>
+        <p style="color: #6c7a89; font-size: 14px;">Синхронизация с сервером будет добавлена на следующем шаге.</p>
+        <button class="menu-btn btn-hard" onclick="goToMenu()" style="margin-top: 20px; width: 200px;">Отмена</button>
+    </div>
+
+    <!-- Игровой экран -->
     <div id="game-screen">
         <div class="header">
             <h1 id="player-name">Шашки Арена 🏆</h1>
@@ -121,6 +131,7 @@
         </div>
     </div>
 
+    <!-- Экран завершения игры -->
     <div id="game-over-screen">
         <div id="game-over-text">Победа!</div>
         <button class="end-btn primary" onclick="restartGame()">🔄 Играть снова</button>
@@ -131,10 +142,17 @@
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
 
+        // --- ЧТЕНИЕ ПАРАМЕТРОВ ИЗ URL ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameMode = urlParams.get('mode'); // 'bot' или null
+        const roomId = urlParams.get('room');   // ID комнаты для онлайн-игры
+        const myColor = urlParams.get('color'); // 'white' или 'black'
+
         const boardElement = document.getElementById('game-board');
         const statusElement = document.getElementById('status');
         const nameElement = document.getElementById('player-name');
         const menuScreen = document.getElementById('menu-screen');
+        const waitingScreen = document.getElementById('waiting-screen');
         const gameScreen = document.getElementById('game-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
         const gameOverText = document.getElementById('game-over-text');
@@ -145,7 +163,6 @@
         let currentDifficulty = 'easy';
         let board = []; 
         let isGameOver = false;
-        // Храним ссылки на DOM элементы клеток, чтобы быстро к ним обращаться
         let cellsDOM = []; 
 
         try {
@@ -154,9 +171,26 @@
             }
         } catch (e) {}
 
+        // --- ОПРЕДЕЛЕНИЕ РЕЖИМА ПРИ ЗАГРУЗКЕ ---
+        if (roomId) {
+            // ОНЛАЙН-РЕЖИМ: пока показываем экран ожидания (синхронизация будет добавлена позже)
+            menuScreen.style.display = 'none';
+            waitingScreen.style.display = 'flex';
+            console.log(`Онлайн-игра! Комната: ${roomId}, Мой цвет: ${myColor}`);
+            // TODO: Здесь будет запрос к серверу за состоянием доски
+        } else if (gameMode === 'bot') {
+            // РЕЖИМ С БОТОМ: показываем меню выбора сложности
+            menuScreen.style.display = 'flex';
+        } else {
+            // Если открыли просто так (без параметров) — тоже показываем меню
+            menuScreen.style.display = 'flex';
+        }
+
+        // --- УПРАВЛЕНИЕ ЭКРАНАМИ ---
         function startGame(difficulty) {
             currentDifficulty = difficulty;
             menuScreen.style.display = 'none';
+            waitingScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
             gameScreen.style.display = 'flex';
             isGameOver = false;
@@ -167,8 +201,14 @@
         }
 
         function goToMenu() {
+            // При возврате в меню закрываем Mini App, чтобы не зависнуть в ожидании
+            if (roomId) {
+                tg.close();
+                return;
+            }
             gameScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
+            waitingScreen.style.display = 'none';
             menuScreen.style.display = 'flex';
             isGameOver = true;
         }
@@ -177,7 +217,7 @@
             startGame(currentDifficulty);
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ ---
+        // --- ИНИЦИАЛИЗАЦИЯ ДОСКИ ---
         function initBoard() {
             boardElement.innerHTML = '';
             board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -190,9 +230,7 @@
                     cell.dataset.row = r;
                     cell.dataset.col = c;
                     
-                    // Клик по пустой клетке
                     cell.addEventListener('click', (e) => {
-                        // Если кликнули мимо шашки (по пустому месту)
                         if (e.target === cell) {
                             onCellClick(r, c);
                         }
@@ -203,7 +241,6 @@
                 }
             }
 
-            // Расстановка
             for (let r = 0; r < 3; r++) {
                 for (let c = 0; c < 8; c++) {
                     if ((r + c) % 2 !== 0) board[r][c] = 'b';
@@ -218,7 +255,6 @@
         }
 
         function renderAllPieces() {
-            // Удаляем все старые шашки
             document.querySelectorAll('.piece').forEach(p => p.remove());
 
             for (let r = 0; r < 8; r++) {
@@ -236,26 +272,21 @@
             piece.className = `piece ${colorClass}`;
             if (type === 'R' || type === 'B') piece.classList.add('king-piece');
             
-            // ВАЖНО: Шашка создается внутри клетки. Клетка центрирует её через flex.
             const cell = cellsDOM[r][c];
             cell.appendChild(piece);
             
-            // Клик именно по шашке
             piece.addEventListener('click', (e) => {
-                e.stopPropagation(); // Останавливаем, чтобы не сработал клик по клетке
+                e.stopPropagation();
                 onCellClick(r, c);
             });
         }
 
-        // Плавное перемещение шашки из одной клетки в другую
         function movePieceDOM(fromR, fromC, toR, toC) {
             const fromCell = cellsDOM[fromR][fromC];
             const toCell = cellsDOM[toR][toC];
             const piece = fromCell.querySelector('.piece');
             
             if (piece) {
-                // Убираем из старой клетки, добавляем в новую
-                // Браузер сам анимирует перемещение благодаря transition
                 toCell.appendChild(piece);
             }
         }
@@ -319,7 +350,6 @@
         function onCellClick(r, c) {
             if (!isPlayerTurn || isGameOver) return;
 
-            // Если кликнули по своей шашке
             if (board[r][c] && board[r][c].toLowerCase() === 'r') {
                 const captures = getAllMoves('r').filter(m => m.isCapture);
                 if (captures.length > 0 && !captures.some(m => m.fromRow === r && m.fromCol === c)) {
@@ -327,7 +357,6 @@
                     return;
                 }
 
-                // Отмена выбора
                 if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
                     selectedCell = null;
                     updatePiecesVisuals();
@@ -342,7 +371,6 @@
                 return;
             }
 
-            // Если кликнули по пустой клетке и шашка выбрана
             if (selectedCell && !board[r][c]) {
                 const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c);
                 const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
