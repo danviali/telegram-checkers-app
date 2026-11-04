@@ -34,7 +34,6 @@
         /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         
-        /* Фиксированная высота шапки */
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; }
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
@@ -51,32 +50,41 @@
             border: 1px solid rgba(255, 255, 255, 0.05); 
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); 
             position: relative; 
-            touch-action: none; /* Убираем скролл при кликах */
+            touch-action: none;
         }
         
         .board { 
             display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); 
             width: 100%; height: 100%; border-radius: 8px; overflow: hidden; 
-            position: relative;
-            pointer-events: none; /* Сетка не перехватывает клики */
         }
-        .cell { width: 100%; height: 100%; position: relative; z-index: 1; pointer-events: auto; /* Клики только по пустым клеткам */ }
+        
+        /* Клетка теперь является контейнером для шашки */
+        .cell { 
+            width: 100%; height: 100%; 
+            position: relative; 
+            display: flex; align-items: center; justify-content: center;
+            /* Клики по клетке (для пустых мест) */
+            cursor: pointer;
+        }
         
         .light { background-color: #1e2633; }
         .dark { background-color: #131821; }
 
-        /* --- ШАШКИ --- */
+        /* --- ШАШКИ (ВНУТРИ КЛЕТКИ) --- */
         .piece { 
-            width: 9.375%; height: 9.375%; 
+            width: 78%; 
+            height: 78%; 
             border-radius: 50%; 
-            cursor: pointer; 
-            position: absolute; 
-            z-index: 5; 
-            transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s; 
-            margin: 1.5625%; 
-            pointer-events: auto; /* Шашка ловит клики */
+            position: absolute;
+            /* Плавная анимация */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+            /* Шашка ловит клики */
+            pointer-events: auto;
+            cursor: pointer;
+            z-index: 2;
         }
         
+        /* Эффект нажатия */
         .piece:active { transform: scale(0.9); }
         .red-piece { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); box-shadow: 0 4px 10px rgba(255, 0, 127, 0.4); border: 1px solid rgba(255,255,255,0.2); }
         .black-piece { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); box-shadow: 0 4px 10px rgba(0, 242, 254, 0.4); border: 1px solid rgba(255,255,255,0.2); }
@@ -85,9 +93,7 @@
         .selected { border: 3px solid #ffffff !important; box-shadow: 0 0 10px #ffffff !important; transform: scale(1.1); z-index: 10;}
         .hint-piece { box-shadow: 0 0 15px #2ecc71, 0 0 25px #2ecc71 !important; border: 2px solid #2ecc71 !important; }
 
-        .fade-out { animation: fadeOut 0.3s forwards; }
-        @keyframes fadeOut { to { opacity: 0; transform: scale(0); } }
-
+        .fade-out { opacity: 0; transform: scale(0); }
     </style>
 </head>
 <body>
@@ -126,7 +132,6 @@
         tg.expand(); tg.ready();
 
         const boardElement = document.getElementById('game-board');
-        const boardContainer = document.getElementById('board-container');
         const statusElement = document.getElementById('status');
         const nameElement = document.getElementById('player-name');
         const menuScreen = document.getElementById('menu-screen');
@@ -140,7 +145,8 @@
         let currentDifficulty = 'easy';
         let board = []; 
         let isGameOver = false;
-        let piecesDOM = {}; 
+        // Храним ссылки на DOM элементы клеток, чтобы быстро к ним обращаться
+        let cellsDOM = []; 
 
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
@@ -174,21 +180,26 @@
         // --- ИНИЦИАЛИЗАЦИЯ ---
         function initBoard() {
             boardElement.innerHTML = '';
-            boardContainer.querySelectorAll('.piece').forEach(p => p.remove()); 
-            
             board = Array(8).fill(null).map(() => Array(8).fill(null));
-            piecesDOM = {};
+            cellsDOM = Array(8).fill(null).map(() => Array(8).fill(null));
 
-            // Создаем сетку клеток
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     const cell = document.createElement('div');
                     cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     cell.dataset.row = r;
                     cell.dataset.col = c;
-                    // Клик по клетке (для пустых клеток)
-                    cell.addEventListener('click', () => onCellClick(r, c));
+                    
+                    // Клик по пустой клетке
+                    cell.addEventListener('click', (e) => {
+                        // Если кликнули мимо шашки (по пустому месту)
+                        if (e.target === cell) {
+                            onCellClick(r, c);
+                        }
+                    });
+                    
                     boardElement.appendChild(cell);
+                    cellsDOM[r][c] = cell;
                 }
             }
 
@@ -207,8 +218,8 @@
         }
 
         function renderAllPieces() {
-            boardContainer.querySelectorAll('.piece').forEach(p => p.remove());
-            piecesDOM = {};
+            // Удаляем все старые шашки
+            document.querySelectorAll('.piece').forEach(p => p.remove());
 
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
@@ -225,54 +236,59 @@
             piece.className = `piece ${colorClass}`;
             if (type === 'R' || type === 'B') piece.classList.add('king-piece');
             
-            piece.style.top = `${r * 12.5}%`;
-            piece.style.left = `${c * 12.5}%`;
+            // ВАЖНО: Шашка создается внутри клетки. Клетка центрирует её через flex.
+            const cell = cellsDOM[r][c];
+            cell.appendChild(piece);
             
             // Клик именно по шашке
             piece.addEventListener('click', (e) => {
-                e.stopPropagation(); // Останавливаем всплытие, чтобы не сработал клик по клетке
+                e.stopPropagation(); // Останавливаем, чтобы не сработал клик по клетке
                 onCellClick(r, c);
             });
-
-            boardContainer.appendChild(piece);
-            piecesDOM[`${r}-${c}`] = piece;
         }
 
+        // Плавное перемещение шашки из одной клетки в другую
         function movePieceDOM(fromR, fromC, toR, toC) {
-            const piece = piecesDOM[`${fromR}-${fromC}`];
+            const fromCell = cellsDOM[fromR][fromC];
+            const toCell = cellsDOM[toR][toC];
+            const piece = fromCell.querySelector('.piece');
+            
             if (piece) {
-                piece.style.top = `${toR * 12.5}%`;
-                piece.style.left = `${toC * 12.5}%`;
-                delete piecesDOM[`${fromR}-${fromC}`];
-                piecesDOM[`${toR}-${toC}`] = piece;
+                // Убираем из старой клетки, добавляем в новую
+                // Браузер сам анимирует перемещение благодаря transition
+                toCell.appendChild(piece);
             }
         }
 
         function removePieceDOM(r, c) {
-            const piece = piecesDOM[`${r}-${c}`];
+            const cell = cellsDOM[r][c];
+            const piece = cell.querySelector('.piece');
             if (piece) {
                 piece.classList.add('fade-out');
                 setTimeout(() => piece.remove(), 300);
-                delete piecesDOM[`${r}-${c}`];
             }
         }
 
         function updatePiecesVisuals() {
-            for (let key in piecesDOM) {
-                const [r, c] = key.split('-').map(Number);
-                const piece = piecesDOM[key];
-                const type = board[r][c];
-                if (!type) continue;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = cellsDOM[r][c];
+                    const piece = cell.querySelector('.piece');
+                    if (!piece) continue;
 
-                if ((type === 'R' || type === 'B') && !piece.classList.contains('king-piece')) {
-                    piece.classList.add('king-piece');
+                    const type = board[r][c];
+                    if (!type) continue;
+
+                    if ((type === 'R' || type === 'B') && !piece.classList.contains('king-piece')) {
+                        piece.classList.add('king-piece');
+                    }
+                    if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
+                        piece.classList.add('selected');
+                    } else {
+                        piece.classList.remove('selected');
+                    }
+                    if (piece.classList.contains('hint-piece')) piece.classList.remove('hint-piece');
                 }
-                if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
-                    piece.classList.add('selected');
-                } else {
-                    piece.classList.remove('selected');
-                }
-                if (piece.classList.contains('hint-piece')) piece.classList.remove('hint-piece');
             }
         }
 
@@ -284,7 +300,8 @@
             if (moves.length === 0) return;
 
             const bestMove = getBestMoveForPlayer(moves);
-            const piece = piecesDOM[`${bestMove.fromRow}-${bestMove.fromCol}`];
+            const cell = cellsDOM[bestMove.fromRow][bestMove.fromCol];
+            const piece = cell.querySelector('.piece');
             if (piece) piece.classList.add('hint-piece');
             
             if (bestMove.isCapture) {
