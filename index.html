@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Шашки Онлайн</title>
-    <!-- Трендовая иконка вкладки (Favicon) через Emoji шашек -->
-   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://w3.org viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🔴🔵</text></svg>">
-
     <!-- Официальный скрипт Telegram Mini Apps -->
     <script src="https://telegram.org"></script>
     <style>
@@ -106,7 +103,7 @@
         }
         /* Яркие неоновые игроки */
         .red-piece { 
-            background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); /* Трендовый кислотно-розовый / огненный */
+            background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); /* Трендовый кислотно-розовый */
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 4px 12px rgba(255, 0, 127, 0.4);
         }
@@ -121,7 +118,7 @@
 
     <div class="header">
         <h1 id="player-name">Шашки Арена 🏆</h1>
-        <div id="status">Загрузка профиля...</div>
+        <div id="status">Твой ход! Нажми на шашку</div>
     </div>
 
     <div class="board-container">
@@ -129,37 +126,56 @@
     </div>
 
     <script>
+        // Инициализируем Telegram WebApp API
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        tg.expand(); 
         tg.ready();
 
         const boardElement = document.getElementById('game-board');
         const statusElement = document.getElementById('status');
         const nameElement = document.getElementById('player-name');
 
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
-            statusElement.innerText = "Поиск свободного соперника...";
-        } else {
-            nameElement.innerText = "Кибер Шашки 🖥️";
-            statusElement.innerText = "Режим тестирования";
+        let selectedPiece = null;
+
+        // Безопасно вытягиваем имя пользователя, если Telegram его предоставил [INDEX]
+        try {
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) {
+                nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
+            } else {
+                nameElement.innerText = "Игрок Виктория 👑";
+            }
+        } catch (e) {
+            nameElement.innerText = "Игрок Виктория 👑";
         }
 
+        // Функция отрисовки и создания логики кликов
         function createBoard() {
+            boardElement.innerHTML = ''; 
+            
             for (let row = 0; row < 8; row++) {
                 for (let col = 0; col < 8; col++) {
                     const cell = document.createElement('div');
                     cell.className = `cell ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    // Клик по пустой клетке для совершения хода
+                    cell.addEventListener('click', (e) => {
+                        if (selectedPiece && cell.classList.contains('dark') && !cell.hasChildNodes()) {
+                            cell.appendChild(selectedPiece);
+                            selectedPiece.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+                            selectedPiece = null;
+                            statusElement.innerText = "Ход сделан! Выбери шашку";
+                        }
+                    });
                     
-                    // Расставляем шашки на темных клетках
+                    // Первоначальная расстановка
                     if ((row + col) % 2 !== 0) {
                         if (row < 3) {
-                            const piece = document.createElement('div');
-                            piece.className = 'piece black-piece';
+                            const piece = createPiece('piece black-piece');
                             cell.appendChild(piece);
                         } else if (row > 4) {
-                            const piece = document.createElement('div');
-                            piece.className = 'piece red-piece';
+                            const piece = createPiece('piece red-piece');
                             cell.appendChild(piece);
                         }
                     }
@@ -168,6 +184,27 @@
             }
         }
 
+        // Логика выделения шашки по клику
+        function createPiece(className) {
+            const piece = document.createElement('div');
+            piece.className = className;
+
+            piece.addEventListener('click', (e) => {
+                e.stopPropagation(); // Отменяем клик по клетке, которая находится ПОД шашкой
+                
+                if (selectedPiece) {
+                    selectedPiece.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+                }
+
+                selectedPiece = piece;
+                piece.style.border = "3px solid #f1c40f"; // Желтая неоновая подсветка выбранной шашки
+                statusElement.innerText = "Шашка выбрана! Нажми куда ходить";
+            });
+
+            return piece;
+        }
+
+        // Запуск
         createBoard();
     </script>
 </body>
