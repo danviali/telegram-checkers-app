@@ -29,6 +29,7 @@
         /* --- ЭКРАН ОЖИДАНИЯ ОНЛАЙН --- */
         #waiting-screen { display: none; flex-direction: column; align-items: center; gap: 20px; z-index: 10; width: 100%; text-align: center; }
         #waiting-screen h2 { font-size: 24px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #waiting-screen p { color: #6c7a89; font-size: 14px; word-break: break-word; padding: 0 20px; }
         .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #4facfe; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -77,8 +78,8 @@
 
     <div id="waiting-screen">
         <div class="spinner"></div>
-        <h2>Подключение к игре...</h2>
-        <p style="color: #6c7a89; font-size: 14px;">Пожалуйста, подожди.</p>
+        <h2 id="waiting-title">Подключение к игре...</h2>
+        <p id="waiting-text">Пожалуйста, подожди.</p>
         <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
     </div>
 
@@ -102,7 +103,6 @@
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
 
-        // 🔥 ВАША ССЫЛКА ИЗ NGROK
         const SERVER_URL = "https://similarly-discount-viability.ngrok-free.dev";
         
         const urlParams = new URLSearchParams(window.location.search);
@@ -125,6 +125,10 @@
         const gameOverText = document.getElementById('game-over-text');
         const helperCheckbox = document.getElementById('helper-checkbox');
 
+        // Элементы для вывода ошибок
+        const waitingTitle = document.getElementById('waiting-title');
+        const waitingText = document.getElementById('waiting-text');
+
         let selectedCell = null;
         let isPlayerTurn = true;
         let currentDifficulty = 'easy';
@@ -139,7 +143,7 @@
         } catch (e) {}
 
         // ==========================================
-        // ЛОГИКА ОНЛАЙН-РЕЖИМА (с заголовком для ngrok)
+        // ЛОГИКА ОНЛАЙН-РЕЖИМА (с диагностикой)
         // ==========================================
         if (isOnlineMode) {
             menuScreen.style.display = 'none';
@@ -153,8 +157,20 @@
                     const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
                         headers: { "ngrok-skip-browser-warning": "true" }
                     });
+                    
+                    if (!res.ok) {
+                        const errText = await res.text();
+                        waitingTitle.innerText = "Ошибка " + res.status;
+                        waitingText.innerText = errText.substring(0, 100);
+                        return;
+                    }
+
                     const data = await res.json();
-                    if (data.error) { console.error(data.error); return; }
+                    if (data.error) { 
+                        waitingTitle.innerText = "Ошибка данных";
+                        waitingText.innerText = data.error;
+                        return; 
+                    }
                     
                     onlineBoard = data.board;
                     onlineTurn = data.turn;
@@ -170,6 +186,8 @@
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
                 } catch (e) {
                     console.error("Ошибка связи с сервером:", e);
+                    waitingTitle.innerText = "Ошибка сети!";
+                    waitingText.innerText = "Проверь консоль (F12) и ngrok";
                 }
             }
             fetchState();
