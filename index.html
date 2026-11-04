@@ -35,15 +35,15 @@
 
         /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
-        .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; }
+        .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
         
         /* Таймер */
         #timer-display {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 0;
+            right: 0;
             background: rgba(0,0,0,0.5);
             padding: 5px 10px;
             border-radius: 10px;
@@ -151,10 +151,10 @@
         let isGameOver = false;
         let cellsDOM = []; 
         
-        // Таймер
         let turnTimer = null;
-        const TURN_TIME = 180; // 3 минуты в секундах
+        const TURN_TIME = 180; 
         let timeLeft = TURN_TIME;
+        let isAnimating = false;
 
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
@@ -202,11 +202,13 @@
                         gameScreen.style.display = 'flex';
                         initOnlineBoard();
                     } else {
-                        updateOnlineBoard(); 
+                        // Вызываем обновление только если не в процессе анимации
+                        if (!isAnimating) {
+                            updateOnlineBoard(); 
+                        }
                     }
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
                     
-                    // Управление таймером при смене хода
                     if (isPlayerTurn && !turnTimer) {
                         startTimer();
                     } else if (!isPlayerTurn && turnTimer) {
@@ -227,7 +229,6 @@
             menuScreen.style.display = 'flex';
         }
 
-        // --- ТАЙМЕР ---
         function startTimer() {
             timeLeft = TURN_TIME;
             updateTimerDisplay();
@@ -238,7 +239,6 @@
                 if (timeLeft <= 0) {
                     clearInterval(turnTimer);
                     turnTimer = null;
-                    // Время вышло — отправляем запрос на сервер, чтобы передать ход
                     statusElement.innerText = "Время вышло! Ход переходит...";
                     sendTimeoutToServer();
                 }
@@ -249,12 +249,7 @@
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
             timerDisplay.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            // Меняем цвет, если осталось меньше 30 секунд
-            if (timeLeft < 30) {
-                timerDisplay.style.color = "#ff4b2b";
-            } else {
-                timerDisplay.style.color = "#f1c40f";
-            }
+            timerDisplay.style.color = timeLeft < 30 ? "#ff4b2b" : "#f1c40f";
         }
 
         async function sendTimeoutToServer() {
@@ -269,12 +264,10 @@
                 });
                 const data = await res.json();
                 if (data.error) { statusElement.innerText = "Ошибка: " + data.error; return; }
-                // После таймаута сразу обновляем состояние
                 setTimeout(fetchState, 300);
             } catch (e) { console.error(e); }
         }
 
-        // --- ОТРИСОВКА ---
         function initOnlineBoard() {
             boardElement.innerHTML = '';
             board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -296,6 +289,7 @@
             updateOnlineBoard(true);
         }
 
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОБНОВЛЕНИЯ (БЕЗ ПРЫЖКОВ)
         function updateOnlineBoard(forceRedraw = false) {
             if (!onlineBoard) return;
             
@@ -327,21 +321,31 @@
                             if (type === 'R' || type === 'B') {
                                 piece.classList.add('king-piece');
                             }
+                            piece.dataset.row = r;
+                            piece.dataset.col = c;
                         }
                     } else {
                         if (piece) piece.remove();
                     }
                 }
             }
-            updatePiecesVisuals();
+            if (selectedCell) {
+                const p = cellsDOM[selectedCell.r][selectedCell.c].querySelector('.piece');
+                if (p) p.classList.add('selected');
+            }
+            document.querySelectorAll('.hint-piece').forEach(el => el.classList.remove('hint-piece'));
         }
 
+        // Плавное перемещение
         function movePieceDOM(fR, fC, tR, tC) {
             const piece = cellsDOM[fR][fC].querySelector('.piece');
             if (piece) {
+                isAnimating = true; // Блокируем обновление во время анимации
                 cellsDOM[tR][tC].appendChild(piece);
                 piece.dataset.row = tR;
                 piece.dataset.col = tC;
+                // Разблокируем через 300мс (время анимации)
+                setTimeout(() => { isAnimating = false; }, 350);
             }
         }
 
@@ -387,7 +391,6 @@
                 isPlayerTurn = false; 
                 statusElement.innerText = "Ход отправлен...";
                 
-                // Сбрасываем таймер, так как ход сделан
                 if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
                 timerDisplay.innerText = "00:00";
                 
@@ -455,7 +458,6 @@
             piece.dataset.row = r;
             piece.dataset.col = c;
             
-            // Обработчик клика по шашке
             piece.addEventListener('click', (e) => { 
                 e.stopPropagation(); 
                 if (isOnlineMode) onCellClickOnline(r, c); 
