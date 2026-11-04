@@ -34,14 +34,8 @@
         /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         
-        /* ФИКСИРОВАННАЯ ВЫСОТА ШАПКИ, ЧТОБЫ ДОСКА НЕ ПРЫГАЛА */
-        .header { 
-            margin-bottom: 15px; 
-            text-align: center; 
-            height: 60px; /* Жестко задаем высоту */
-            display: flex; flex-direction: column; justify-content: flex-start;
-            width: 100%;
-        }
+        /* Фиксированная высота шапки */
+        .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; }
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
 
@@ -56,32 +50,31 @@
             background: #0f131a; padding: 5px; border-radius: 12px; 
             border: 1px solid rgba(255, 255, 255, 0.05); 
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); 
-            position: relative; /* Важно для абсолютного позиционирования шашек */
+            position: relative; 
+            touch-action: none; /* Убираем скролл при кликах */
         }
         
-        /* Сетка для кликов (без шашек внутри) */
         .board { 
             display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); 
             width: 100%; height: 100%; border-radius: 8px; overflow: hidden; 
             position: relative;
+            pointer-events: none; /* Сетка не перехватывает клики */
         }
-        .cell { width: 100%; height: 100%; position: relative; z-index: 1; }
+        .cell { width: 100%; height: 100%; position: relative; z-index: 1; pointer-events: auto; /* Клики только по пустым клеткам */ }
         
         .light { background-color: #1e2633; }
         .dark { background-color: #131821; }
 
-        /* --- ШАШКИ (АБСОЛЮТНОЕ ПОЗИЦИОНИРОВАНИЕ ДЛЯ АНИМАЦИИ) --- */
+        /* --- ШАШКИ --- */
         .piece { 
-            width: 9.375%; /* 75% от 1/8 доски */
-            height: 9.375%; 
+            width: 9.375%; height: 9.375%; 
             border-radius: 50%; 
             cursor: pointer; 
             position: absolute; 
             z-index: 5; 
-            /* Плавная анимация перемещения */
             transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s; 
-            /* Центрирование внутри клетки */
-            margin: 1.5625%; /* (12.5 - 9.375) / 2 */
+            margin: 1.5625%; 
+            pointer-events: auto; /* Шашка ловит клики */
         }
         
         .piece:active { transform: scale(0.9); }
@@ -92,7 +85,6 @@
         .selected { border: 3px solid #ffffff !important; box-shadow: 0 0 10px #ffffff !important; transform: scale(1.1); z-index: 10;}
         .hint-piece { box-shadow: 0 0 15px #2ecc71, 0 0 25px #2ecc71 !important; border: 2px solid #2ecc71 !important; }
 
-        /* Анимация исчезновения (для съеденных шашек) */
         .fade-out { animation: fadeOut 0.3s forwards; }
         @keyframes fadeOut { to { opacity: 0; transform: scale(0); } }
 
@@ -148,7 +140,7 @@
         let currentDifficulty = 'easy';
         let board = []; 
         let isGameOver = false;
-        let piecesDOM = {}; // Храним ссылки на DOM элементы шашек { "r-c": element }
+        let piecesDOM = {}; 
 
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
@@ -182,7 +174,7 @@
         // --- ИНИЦИАЛИЗАЦИЯ ---
         function initBoard() {
             boardElement.innerHTML = '';
-            boardContainer.querySelectorAll('.piece').forEach(p => p.remove()); // Удаляем старые шашки
+            boardContainer.querySelectorAll('.piece').forEach(p => p.remove()); 
             
             board = Array(8).fill(null).map(() => Array(8).fill(null));
             piecesDOM = {};
@@ -194,6 +186,7 @@
                     cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     cell.dataset.row = r;
                     cell.dataset.col = c;
+                    // Клик по клетке (для пустых клеток)
                     cell.addEventListener('click', () => onCellClick(r, c));
                     boardElement.appendChild(cell);
                 }
@@ -213,7 +206,6 @@
             renderAllPieces();
         }
 
-        // Создание и позиционирование шашек
         function renderAllPieces() {
             boardContainer.querySelectorAll('.piece').forEach(p => p.remove());
             piecesDOM = {};
@@ -233,13 +225,12 @@
             piece.className = `piece ${colorClass}`;
             if (type === 'R' || type === 'B') piece.classList.add('king-piece');
             
-            // Позиционируем через CSS top/left
             piece.style.top = `${r * 12.5}%`;
             piece.style.left = `${c * 12.5}%`;
             
-            // Обработчик клика прямо на шашке (для удобства)
+            // Клик именно по шашке
             piece.addEventListener('click', (e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // Останавливаем всплытие, чтобы не сработал клик по клетке
                 onCellClick(r, c);
             });
 
@@ -247,19 +238,16 @@
             piecesDOM[`${r}-${c}`] = piece;
         }
 
-        // Перемещение шашки (с анимацией)
         function movePieceDOM(fromR, fromC, toR, toC) {
             const piece = piecesDOM[`${fromR}-${fromC}`];
             if (piece) {
                 piece.style.top = `${toR * 12.5}%`;
                 piece.style.left = `${toC * 12.5}%`;
-                // Обновляем ключ в словаре
                 delete piecesDOM[`${fromR}-${fromC}`];
                 piecesDOM[`${toR}-${toC}`] = piece;
             }
         }
 
-        // Удаление съеденной шашки (с анимацией)
         function removePieceDOM(r, c) {
             const piece = piecesDOM[`${r}-${c}`];
             if (piece) {
@@ -269,26 +257,21 @@
             }
         }
 
-        // Обновление визуального состояния (выделение, дамки)
         function updatePiecesVisuals() {
             for (let key in piecesDOM) {
                 const [r, c] = key.split('-').map(Number);
                 const piece = piecesDOM[key];
                 const type = board[r][c];
-                
                 if (!type) continue;
 
-                // Дамка
                 if ((type === 'R' || type === 'B') && !piece.classList.contains('king-piece')) {
                     piece.classList.add('king-piece');
                 }
-                // Выделение
                 if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
                     piece.classList.add('selected');
                 } else {
                     piece.classList.remove('selected');
                 }
-                // Подсказка
                 if (piece.classList.contains('hint-piece')) piece.classList.remove('hint-piece');
             }
         }
@@ -319,6 +302,7 @@
         function onCellClick(r, c) {
             if (!isPlayerTurn || isGameOver) return;
 
+            // Если кликнули по своей шашке
             if (board[r][c] && board[r][c].toLowerCase() === 'r') {
                 const captures = getAllMoves('r').filter(m => m.isCapture);
                 if (captures.length > 0 && !captures.some(m => m.fromRow === r && m.fromCol === c)) {
@@ -341,6 +325,7 @@
                 return;
             }
 
+            // Если кликнули по пустой клетке и шашка выбрана
             if (selectedCell && !board[r][c]) {
                 const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c);
                 const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
@@ -374,7 +359,7 @@
             }
         }
 
-        // --- ЛОГИКА (БЕЗ ИЗМЕНЕНИЙ) ---
+        // --- ЛОГИКА ---
         function getAllMoves(color) {
             let moves = [];
             for (let r = 0; r < 8; r++) {
@@ -446,7 +431,6 @@
             return moves;
         }
 
-        // ВЫПОЛНЕНИЕ ХОДА (С АНИМАЦИЕЙ)
         function executeMove(move) {
             let pieceType = board[move.fromRow][move.fromCol];
             
@@ -462,7 +446,6 @@
             
             board[move.toRow][move.toCol] = pieceType;
             
-            // Двигаем DOM-элемент
             movePieceDOM(move.fromRow, move.fromCol, move.toRow, move.toCol);
             updatePiecesVisuals();
         }
@@ -475,7 +458,7 @@
             setTimeout(botMove, 400);
         }
 
-        // --- БОТ (БЕЗ ИЗМЕНЕНИЙ) ---
+        // --- БОТ ---
         function botMove() {
             if (checkGameOver()) return;
             let allMoves = getAllMoves('b');
