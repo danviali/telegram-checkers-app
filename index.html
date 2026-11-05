@@ -9,7 +9,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 15px; overflow: hidden; }
         
-        /* --- МЕНЮ --- */
         #menu-screen { display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10; width: 100%; }
         .menu-btn { padding: 15px 30px; font-size: 18px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s; width: 250px; color: white; }
         .menu-btn:active { transform: scale(0.95); }
@@ -26,37 +25,21 @@
         .helper-toggle input:checked ~ .checkmark::after { opacity: 1; }
         .helper-label { font-size: 14px; font-weight: 600; color: #c9d1d9; }
 
-        /* --- ЭКРАН ОЖИДАНИЯ ОНЛАЙН --- */
         #waiting-screen { display: none; flex-direction: column; align-items: center; gap: 20px; z-index: 10; width: 100%; text-align: center; }
         #waiting-screen h2 { font-size: 24px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #waiting-screen p { color: #6c7a89; font-size: 14px; word-break: break-word; padding: 0 20px; }
         .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #4facfe; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
-        
-        /* Цвета имени в зависимости от цвета шашек */
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
         .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
         
-        /* Таймер */
-        #timer-display {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 14px;
-            color: #f1c40f;
-            font-weight: 700;
-            z-index: 20;
-        }
+        #timer-display { position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; font-size: 14px; color: #f1c40f; font-weight: 700; z-index: 20; }
 
         #game-over-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 14, 20, 0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
         #game-over-text { font-size: 28px; font-weight: 800; text-align: center; margin-bottom: 20px; }
@@ -64,7 +47,7 @@
         .end-btn:active { transform: scale(0.95); }
         .end-btn.primary { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border: none; color: #0b0e14; }
 
-        .board-container { width: 100%; max-width: 360px; aspect-ratio: 1 / 1; background: #0f131a; padding: 5px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); position: relative; touch-action: none; }
+        .board-container { width: 100%; max-width: 360px; aspect-ratio: 1 / 1; background: #0f131a; padding: 5px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); position: relative; touch-action: none; }
         .board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; border-radius: 8px; overflow: hidden; }
         .cell { width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .light { background-color: #1e2633; }
@@ -72,9 +55,8 @@
 
         .piece { width: 78%; height: 78%; border-radius: 50%; position: absolute; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s; pointer-events: auto; cursor: pointer; z-index: 2; }
         .piece:active { transform: scale(0.9); }
-        .red-piece { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); box-shadow: 0 4px 10px rgba(255, 0, 127, 0.4); border: 1px solid rgba(255,255,255,0.2); }
-        .black-piece { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); box-shadow: 0 4px 10px rgba(0, 242, 254, 0.4); border: 1px solid rgba(255,255,255,0.2); }
-        
+        .red-piece { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); box-shadow: 0 4px 10px rgba(255,0,127,0.4); border: 1px solid rgba(255,255,255,0.2); }
+        .black-piece { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); box-shadow: 0 4px 10px rgba(0,242,254,0.4); border: 1px solid rgba(255,255,255,0.2); }
         .king-piece { border: 3px solid #f1c40f !important; box-shadow: 0 0 15px #f1c40f !important; }
         .selected { border: 3px solid #ffffff !important; box-shadow: 0 0 10px #ffffff !important; transform: scale(1.1); z-index: 10;}
         .hint-piece { box-shadow: 0 0 15px #2ecc71, 0 0 25px #2ecc71 !important; border: 2px solid #2ecc71 !important; }
@@ -160,53 +142,32 @@
         let timeLeft = TURN_TIME;
         let isAnimating = false;
 
-        // Устанавливаем имя и ЦВЕТ имени
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
-                // Подсвечиваем имя цветом шашек
                 if (isOnlineMode) {
-                    if (myColor === 'white') {
-                        nameElement.classList.add('white-color');
-                    } else if (myColor === 'black') {
-                        nameElement.classList.add('black-color');
-                    }
+                    if (myColor === 'white') nameElement.classList.add('white-color');
+                    else if (myColor === 'black') nameElement.classList.add('black-color');
                 } else {
-                    // В игре с ботом вы всегда красные (по умолчанию)
-                    nameElement.classList.add('black-color'); // Красный цвет из градиента
+                    nameElement.classList.add('black-color');
                 }
             }
             myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
         } catch (e) { myPlayerId = 111; }
 
-        // ==========================================
-        // ЛОГИКА ОНЛАЙН-РЕЖИМА
-        // ==========================================
         if (isOnlineMode) {
             menuScreen.style.display = 'none';
             waitingScreen.style.display = 'flex';
             
             async function fetchState() {
                 if (isGameOver) return;
-                
                 try {
                     const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
                         headers: { "ngrok-skip-browser-warning": "true" }
                     });
-                    
-                    if (!res.ok) {
-                        waitingTitle.innerText = "Ошибка " + res.status;
-                        waitingText.innerText = "Сервер ответил: " + res.statusText;
-                        return;
-                    }
-
+                    if (!res.ok) { waitingTitle.innerText = "Ошибка " + res.status; return; }
                     const data = await res.json();
-                    
-                    if (data.error) { 
-                        waitingTitle.innerText = "Ошибка данных";
-                        waitingText.innerText = data.error;
-                        return; 
-                    }
+                    if (data.error) { waitingTitle.innerText = "Ошибка данных"; return; }
                     
                     onlineBoard = data.board;
                     onlineTurn = data.turn;
@@ -217,35 +178,24 @@
                         gameScreen.style.display = 'flex';
                         initOnlineBoard();
                     } else {
-                        if (!isAnimating) {
-                            updateOnlineBoard(); 
-                        }
+                        if (!isAnimating) updateOnlineBoard(); 
                     }
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
                     
-                    // Проверка на победу от сервера
                     if (data.winner && !isGameOver) {
                         isGameOver = true;
-                        if (data.winner === myColor) {
-                            showGameOver("Ты победил! 🏆 +1 кубок", true);
-                        } else {
-                            showGameOver("Ты проиграл! 🤖", false);
-                        }
+                        if (data.winner === myColor) showGameOver("Ты победил! 🏆", true);
+                        else showGameOver("Ты проиграл! 🤖", false);
                         return;
                     }
 
-                    if (isPlayerTurn && !turnTimer) {
-                        startTimer();
-                    } else if (!isPlayerTurn && turnTimer) {
-                        clearInterval(turnTimer);
-                        turnTimer = null;
-                        timerDisplay.innerText = "00:00";
+                    if (isPlayerTurn && !turnTimer) startTimer();
+                    else if (!isPlayerTurn && turnTimer) {
+                        clearInterval(turnTimer); turnTimer = null; timerDisplay.innerText = "00:00";
                     }
-                    
                 } catch (e) {
-                    console.error("Ошибка:", e);
+                    console.error(e);
                     waitingTitle.innerText = "Ошибка сети!";
-                    waitingText.innerText = "Проверьте: " + SERVER_URL;
                 }
             }
             fetchState();
@@ -264,7 +214,7 @@
                 if (timeLeft <= 0) {
                     clearInterval(turnTimer);
                     turnTimer = null;
-                    statusElement.innerText = "Время вышло! Ход переходит...";
+                    statusElement.innerText = "Время вышло!";
                     sendTimeoutToServer();
                 }
             }, 1000);
@@ -279,16 +229,11 @@
 
         async function sendTimeoutToServer() {
             try {
-                const res = await fetch(`${SERVER_URL}/api/timeout`, {
+                await fetch(`${SERVER_URL}/api/timeout`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        "ngrok-skip-browser-warning": "true"
-                    },
+                    headers: { 'Content-Type': 'application/json', "ngrok-skip-browser-warning": "true" },
                     body: JSON.stringify({ room: roomId, player_id: myPlayerId })
                 });
-                const data = await res.json();
-                if (data.error) { statusElement.innerText = "Ошибка: " + data.error; return; }
                 setTimeout(fetchState, 300);
             } catch (e) { console.error(e); }
         }
@@ -302,12 +247,8 @@
                 for (let c = 0; c < 8; c++) {
                     const cell = document.createElement('div');
                     cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                    cell.dataset.row = r;
-                    cell.dataset.col = c;
-                    // ВАЖНО: Клик всегда обрабатывается на клетке
-                    cell.addEventListener('click', (e) => {
-                        onCellClickOnline(r, c);
-                    });
+                    cell.dataset.row = r; cell.dataset.col = c;
+                    cell.addEventListener('click', () => onCellClickOnline(r, c));
                     boardElement.appendChild(cell);
                     cellsDOM[r][c] = cell;
                 }
@@ -317,15 +258,11 @@
 
         function updateOnlineBoard(forceRedraw = false) {
             if (!onlineBoard) return;
-            
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     let val = onlineBoard[r][c];
                     let type = null;
-                    if (val === 1) type = 'r';
-                    else if (val === 2) type = 'b';
-                    else if (val === 3) type = 'R';
-                    else if (val === 4) type = 'B';
+                    if (val === 1) type = 'r'; else if (val === 2) type = 'b'; else if (val === 3) type = 'R'; else if (val === 4) type = 'B';
                     board[r][c] = type;
                 }
             }
@@ -343,11 +280,8 @@
                         } else {
                             const colorClass = (type.toLowerCase() === 'r') ? 'red-piece' : 'black-piece';
                             piece.className = `piece ${colorClass}`;
-                            if (type === 'R' || type === 'B') {
-                                piece.classList.add('king-piece');
-                            }
-                            piece.dataset.row = r;
-                            piece.dataset.col = c;
+                            if (type === 'R' || type === 'B') piece.classList.add('king-piece');
+                            piece.dataset.row = r; piece.dataset.col = c;
                         }
                     } else {
                         if (piece) piece.remove();
@@ -358,7 +292,6 @@
                 const p = cellsDOM[selectedCell.r][selectedCell.c].querySelector('.piece');
                 if (p) p.classList.add('selected');
             }
-            document.querySelectorAll('.hint-piece').forEach(el => el.classList.remove('hint-piece'));
         }
 
         function movePieceDOM(fR, fC, tR, tC) {
@@ -366,22 +299,15 @@
             if (piece) {
                 isAnimating = true;
                 cellsDOM[tR][tC].appendChild(piece);
-                piece.dataset.row = tR;
-                piece.dataset.col = tC;
+                piece.dataset.row = tR; piece.dataset.col = tC;
                 setTimeout(() => { isAnimating = false; }, 350);
             }
         }
 
         function onCellClickOnline(r, c) {
-            // Если сейчас не наш ход, ничего не делаем
-            if (!isPlayerTurn) {
-                statusElement.innerText = "Сейчас не твой ход!";
-                return;
-            }
-            
+            if (!isPlayerTurn) { statusElement.innerText = "Сейчас не твой ход!"; return; }
             const myPieceColor = (myColor === 'white') ? 'r' : 'b';
 
-            // Если кликнули по своей шашке
             if (board[r][c] && board[r][c].toLowerCase() === myPieceColor) {
                 if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
                     selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Твой ход!"; return;
@@ -389,7 +315,6 @@
                 selectedCell = { r, c }; updatePiecesVisuals(); statusElement.innerText = "Шашка выбрана!"; return;
             }
 
-            // Если шашка выбрана и кликнули по пустой клетке
             if (selectedCell && !board[r][c]) {
                 const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c);
                 const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
@@ -406,67 +331,34 @@
             try {
                 const res = await fetch(`${SERVER_URL}/api/move`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        "ngrok-skip-browser-warning": "true"
-                    },
+                    headers: { 'Content-Type': 'application/json', "ngrok-skip-browser-warning": "true" },
                     body: JSON.stringify({ room: roomId, player_id: myPlayerId, move: move })
                 });
                 const data = await res.json();
                 if (data.error) { statusElement.innerText = "Ошибка: " + data.error; return; }
-                selectedCell = null; 
-                isPlayerTurn = false; 
-                statusElement.innerText = "Ход отправлен...";
-                
+                selectedCell = null; isPlayerTurn = false; statusElement.innerText = "Ход отправлен...";
                 if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
                 timerDisplay.innerText = "00:00";
-                
                 setTimeout(fetchState, 500);
             } catch (e) { console.error(e); }
         }
 
-        // --- ОБЩИЕ ФУНКЦИИ ---
         function startGame(difficulty) {
-            currentDifficulty = difficulty; 
-            menuScreen.style.display = 'none'; 
-            waitingScreen.style.display = 'none'; 
-            gameOverScreen.style.display = 'none'; 
-            gameScreen.style.display = 'flex';
-            isGameOver = false; 
-            initBoard(); 
-            isPlayerTurn = true; 
-            statusElement.innerText = "Твой ход! Нажми на красную шашку"; 
-            showHint();
+            currentDifficulty = difficulty; menuScreen.style.display = 'none'; waitingScreen.style.display = 'none'; gameOverScreen.style.display = 'none'; gameScreen.style.display = 'flex';
+            isGameOver = false; initBoard(); isPlayerTurn = true; statusElement.innerText = "Твой ход!"; showHint();
         }
 
         function goToMenu() { 
             if (roomId) { tg.close(); return; } 
-            gameScreen.style.display = 'none'; 
-            gameOverScreen.style.display = 'none'; 
-            menuScreen.style.display = 'flex'; 
-            isGameOver = true; 
+            gameScreen.style.display = 'none'; gameOverScreen.style.display = 'none'; menuScreen.style.display = 'flex'; isGameOver = true; 
             if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
         }
 
-        function restartGame() { 
-            startGame(currentDifficulty); 
-        }
-
         function initBoard() {
-            boardElement.innerHTML = ''; 
-            board = Array(8).fill(null).map(() => Array(8).fill(null)); 
-            cellsDOM = Array(8).fill(null).map(() => Array(8).fill(null));
-            
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    const cell = document.createElement('div'); 
-                    cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`; 
-                    cell.dataset.row = r; 
-                    cell.dataset.col = c;
-                    cell.addEventListener('click', (e) => { onCellClick(r, c); });
-                    boardElement.appendChild(cell); 
-                    cellsDOM[r][c] = cell;
-                }
+            boardElement.innerHTML = ''; board = Array(8).fill(null).map(() => Array(8).fill(null)); cellsDOM = Array(8).fill(null).map(() => Array(8).fill(null));
+            for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+                const cell = document.createElement('div'); cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`; cell.dataset.row = r; cell.dataset.col = c;
+                cell.addEventListener('click', () => onCellClick(r, c)); boardElement.appendChild(cell); cellsDOM[r][c] = cell;
             }
             for (let r = 0; r < 3; r++) for (let c = 0; c < 8; c++) if ((r + c) % 2 !== 0) board[r][c] = 'b';
             for (let r = 5; r < 8; r++) for (let c = 0; c < 8; c++) if ((r + c) % 2 !== 0) board[r][c] = 'r';
@@ -482,8 +374,7 @@
             const piece = document.createElement('div');
             piece.className = `piece ${type.toLowerCase() === 'r' ? 'red-piece' : 'black-piece'}`;
             if (type === 'R' || type === 'B') piece.classList.add('king-piece');
-            piece.dataset.row = r;
-            piece.dataset.col = c;
+            piece.dataset.row = r; piece.dataset.col = c;
             cellsDOM[r][c].appendChild(piece);
         }
 
@@ -494,43 +385,29 @@
 
         function updatePiecesVisuals() {
             for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
-                const p = cellsDOM[r][c].querySelector('.piece'); 
-                if (!p || !board[r][c]) continue;
+                const p = cellsDOM[r][c].querySelector('.piece'); if (!p || !board[r][c]) continue;
                 if ((board[r][c] === 'R' || board[r][c] === 'B') && !p.classList.contains('king-piece')) p.classList.add('king-piece');
-                if (selectedCell && selectedCell.r === r && selectedCell.c === c) p.classList.add('selected'); 
-                else p.classList.remove('selected');
+                if (selectedCell && selectedCell.r === r && selectedCell.c === c) p.classList.add('selected'); else p.classList.remove('selected');
                 p.classList.remove('hint-piece');
             }
         }
 
         function getAllMoves(color) {
             let moves = [];
-            for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) 
-                if (board[r][c] && board[r][c].toLowerCase() === color) 
-                    moves = moves.concat(getValidMovesForPiece(r, c));
+            for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (board[r][c] && board[r][c].toLowerCase() === color) moves = moves.concat(getValidMovesForPiece(r, c));
             return moves;
         }
 
         function getValidMovesForPiece(r, c) {
-            const piece = board[r][c]; 
-            const isKing = piece === piece.toUpperCase(); 
-            const color = piece.toLowerCase(); 
-            let moves = [];
+            const piece = board[r][c]; const isKing = piece === piece.toUpperCase(); const color = piece.toLowerCase(); let moves = [];
             const dirs = [[-1,-1], [-1,1], [1,-1], [1,1]];
-            
             for (let [dr, dc] of dirs) {
                 if (isKing) {
                     let dist = 1, enemyFound = false, enemyR, enemyC;
                     while (true) {
-                        let nr = r + dr * dist, nc = c + dc * dist; 
-                        if (nr < 0 || nr > 7 || nc < 0 || nc > 7) break;
-                        if (board[nr][nc]) { 
-                            if (board[nr][nc].toLowerCase() === color) break; 
-                            if (enemyFound) break; 
-                            enemyFound = true; enemyR = nr; enemyC = nc; 
-                        } else if (enemyFound) {
-                            moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc, isCapture: true, capturedRow: enemyR, capturedCol: enemyC });
-                        }
+                        let nr = r + dr * dist, nc = c + dc * dist; if (nr < 0 || nr > 7 || nc < 0 || nc > 7) break;
+                        if (board[nr][nc]) { if (board[nr][nc].toLowerCase() === color) break; if (enemyFound) break; enemyFound = true; enemyR = nr; enemyC = nc; }
+                        else if (enemyFound) moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc, isCapture: true, capturedRow: enemyR, capturedCol: enemyC });
                         dist++;
                     }
                 } else {
@@ -541,152 +418,71 @@
                 }
             }
             if (moves.length > 0) return moves;
-
             if (isKing) {
-                for (let [dr, dc] of dirs) {
-                    let dist = 1;
-                    while (true) { 
-                        let nr = r + dr * dist, nc = c + dc * dist; 
-                        if (nr < 0 || nr > 7 || nc < 0 || nc > 7 || board[nr][nc]) break; 
-                        moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc, isCapture: false }); 
-                        dist++; 
-                    }
-                }
+                for (let [dr, dc] of dirs) { let dist = 1; while (true) { let nr = r + dr * dist, nc = c + dc * dist; if (nr < 0 || nr > 7 || nc < 0 || nc > 7 || board[nr][nc]) break; moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc, isCapture: false }); dist++; } }
             } else {
                 let dir = (color === 'r') ? -1 : 1;
-                for (let dc of [-1, 1]) { 
-                    let nr = r + dir, nc = c + dc; 
-                    if (nr >= 0 && nr <= 7 && nc >= 0 && nc <= 7 && !board[nr][nc]) 
-                        moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc, isCapture: false }); 
-                }
+                for (let dc of [-1, 1]) { let nr = r + dir, nc = c + dc; if (nr >= 0 && nr <= 7 && nc >= 0 && nc <= 7 && !board[nr][nc]) moves.push({ fromRow: r, fromCol: c, toRow: nr, toCol: nc, isCapture: false }); }
             }
             return moves;
         }
 
         function executeMove(move) {
             let pieceType = board[move.fromRow][move.fromCol];
-            if (move.isCapture) { 
-                board[move.capturedRow][move.capturedCol] = null; 
-                removePieceDOM(move.capturedRow, move.capturedCol); 
-            }
+            if (move.isCapture) { board[move.capturedRow][move.capturedCol] = null; removePieceDOM(move.capturedRow, move.capturedCol); }
             board[move.fromRow][move.fromCol] = null;
-            if (pieceType === 'r' && move.toRow === 0) pieceType = 'R'; 
-            if (pieceType === 'b' && move.toRow === 7) pieceType = 'B';
+            if (pieceType === 'r' && move.toRow === 0) pieceType = 'R'; if (pieceType === 'b' && move.toRow === 7) pieceType = 'B';
             board[move.toRow][move.toCol] = pieceType;
-            movePieceDOM(move.fromRow, move.fromCol, move.toRow, move.toCol); 
-            updatePiecesVisuals();
+            movePieceDOM(move.fromRow, move.fromCol, move.toRow, move.toCol); updatePiecesVisuals();
         }
 
-        function endTurn() { 
-            if (checkGameOver()) return; 
-            isPlayerTurn = false; 
-            clearHints(); 
-            statusElement.innerText = "Ход бота... 🤖"; 
-            setTimeout(botMove, 400); 
-        }
-
-        function showHint() { 
-            if (isOnlineMode || !helperCheckbox.checked || !isPlayerTurn || isGameOver) return; 
-            let moves = getAllMoves('r'); 
-            if (moves.length === 0) return; 
-            const best = getBestMoveForPlayer(moves); 
-            const p = cellsDOM[best.fromRow][best.fromCol].querySelector('.piece'); 
-            if (p) p.classList.add('hint-piece'); 
-            statusElement.innerText = best.isCapture ? "💡 Подсказка: Сруби!" : "💡 Подсказка: Сходи этой."; 
-        }
-
-        function clearHints() { 
-            document.querySelectorAll('.hint-piece').forEach(el => el.classList.remove('hint-piece')); 
-        }
+        function endTurn() { if (checkGameOver()) return; isPlayerTurn = false; clearHints(); statusElement.innerText = "Ход бота... 🤖"; setTimeout(botMove, 400); }
+        function showHint() { if (isOnlineMode || !helperCheckbox.checked || !isPlayerTurn || isGameOver) return; let moves = getAllMoves('r'); if (moves.length === 0) return; const best = getBestMoveForPlayer(moves); const p = cellsDOM[best.fromRow][best.fromCol].querySelector('.piece'); if (p) p.classList.add('hint-piece'); statusElement.innerText = best.isCapture ? "💡 Подсказка: Сруби!" : "💡 Подсказка: Сходи этой."; }
+        function clearHints() { document.querySelectorAll('.hint-piece').forEach(el => el.classList.remove('hint-piece')); }
 
         function onCellClick(r, c) {
             if (!isPlayerTurn || isGameOver || isOnlineMode) return;
-            
             if (board[r][c] && board[r][c].toLowerCase() === 'r') {
                 const captures = getAllMoves('r').filter(m => m.isCapture);
-                if (captures.length > 0 && !captures.some(m => m.fromRow === r && m.fromCol === c)) { 
-                    statusElement.innerText = "Есть обязательное взятие!"; return; 
-                }
-                if (selectedCell && selectedCell.r === r && selectedCell.c === c) { 
-                    selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Твой ход!"; showHint(); return; 
-                }
+                if (captures.length > 0 && !captures.some(m => m.fromRow === r && m.fromCol === c)) { statusElement.innerText = "Есть обязательное взятие!"; return; }
+                if (selectedCell && selectedCell.r === r && selectedCell.c === c) { selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Твой ход!"; showHint(); return; }
                 selectedCell = { r, c }; updatePiecesVisuals(); statusElement.innerText = "Шашка выбрана!"; return;
             }
-
             if (selectedCell && !board[r][c]) {
-                const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c); 
-                const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
+                const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c); const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
                 if (targetMove) {
                     const allCaptures = getAllMoves('r').filter(m => m.isCapture);
-                    if (allCaptures.length > 0 && !targetMove.isCapture) { 
-                        statusElement.innerText = "Ты должен рубить!"; return; 
-                    }
+                    if (allCaptures.length > 0 && !targetMove.isCapture) { statusElement.innerText = "Ты должен рубить!"; return; }
                     clearHints(); executeMove(targetMove);
                     const furtherCaptures = getValidMovesForPiece(r, c).filter(m => m.isCapture);
-                    if (targetMove.isCapture && furtherCaptures.length > 0) { 
-                        selectedCell = { r, c }; updatePiecesVisuals(); statusElement.innerText = "Продолжай рубить!"; 
-                    } else { 
-                        selectedCell = null; updatePiecesVisuals(); endTurn(); 
-                    }
-                } else { 
-                    selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Так ходить нельзя."; showHint(); 
-                }
+                    if (targetMove.isCapture && furtherCaptures.length > 0) { selectedCell = { r, c }; updatePiecesVisuals(); statusElement.innerText = "Продолжай рубить!"; }
+                    else { selectedCell = null; updatePiecesVisuals(); endTurn(); }
+                } else { selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Так ходить нельзя."; showHint(); }
             }
         }
 
         function botMove() {
             if (checkGameOver()) return;
-            let allMoves = getAllMoves('b'); 
-            let captureMoves = allMoves.filter(m => m.isCapture); 
-            let validMoves = captureMoves.length > 0 ? captureMoves : allMoves;
-            
-            if (validMoves.length === 0) { 
-                statusElement.innerText = "Боту некуда ходить! Ты победил! 🎉"; 
-                isPlayerTurn = true; return; 
-            }
-            
+            let allMoves = getAllMoves('b'); let captureMoves = allMoves.filter(m => m.isCapture); let validMoves = captureMoves.length > 0 ? captureMoves : allMoves;
+            if (validMoves.length === 0) { statusElement.innerText = "Боту некуда ходить! Ты победил! 🎉"; isPlayerTurn = true; return; }
             let chosenMove;
-            if (currentDifficulty === 'easy') {
-                chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-            } else if (currentDifficulty === 'medium') { 
-                if (captureMoves.length > 0) chosenMove = captureMoves[0]; 
-                else { validMoves.sort((a, b) => b.toRow - a.toRow); chosenMove = validMoves[0]; } 
-            } else {
-                chosenMove = getBestMoveForBot(validMoves);
-            }
-            
+            if (currentDifficulty === 'easy') chosenMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+            else if (currentDifficulty === 'medium') { if (captureMoves.length > 0) chosenMove = captureMoves[0]; else { validMoves.sort((a, b) => b.toRow - a.toRow); chosenMove = validMoves[0]; } }
+            else chosenMove = getBestMoveForBot(validMoves);
             executeMove(chosenMove);
             if (checkGameOver()) return;
-            isPlayerTurn = true; 
-            statusElement.innerText = "Твой ход!"; 
-            showHint();
+            isPlayerTurn = true; statusElement.innerText = "Твой ход!"; showHint();
         }
 
         function getBestMoveForBot(moves) {
             let bestMove = moves[0], bestScore = -Infinity;
             for (let move of moves) {
-                let score = 0; 
-                if (move.isCapture) score += 100; 
-                if (move.toRow === 7) score += 50;
-                
-                let tempPiece = board[move.fromRow][move.fromCol]; 
-                board[move.fromRow][move.fromCol] = null; 
-                if (move.isCapture) board[move.capturedRow][move.capturedCol] = null; 
-                board[move.toRow][move.toCol] = tempPiece;
-                
+                let score = 0; if (move.isCapture) score += 100; if (move.toRow === 7) score += 50;
+                let tempPiece = board[move.fromRow][move.fromCol]; board[move.fromRow][move.fromCol] = null; if (move.isCapture) board[move.capturedRow][move.capturedCol] = null; board[move.toRow][move.toCol] = tempPiece;
                 let isVulnerable = false;
-                for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) 
-                    if (board[r][c] && board[r][c].toLowerCase() === 'r') { 
-                        let redMoves = getValidMovesForPiece(r, c); 
-                        if (redMoves.some(m => m.isCapture && m.capturedRow === move.toRow && m.capturedCol === move.toCol)) { isVulnerable = true; break; } 
-                    }
-                
-                board[move.toRow][move.toCol] = null; 
-                if (move.isCapture) board[move.capturedRow][move.capturedCol] = tempPiece === 'b' ? 'r' : 'R'; 
-                board[move.fromRow][move.fromCol] = tempPiece;
-                
-                if (isVulnerable) score -= 80; 
-                score -= Math.abs(3.5 - move.toCol) * 2;
+                for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (board[r][c] && board[r][c].toLowerCase() === 'r') { let redMoves = getValidMovesForPiece(r, c); if (redMoves.some(m => m.isCapture && m.capturedRow === move.toRow && m.capturedCol === move.toCol)) { isVulnerable = true; break; } }
+                board[move.toRow][move.toCol] = null; if (move.isCapture) board[move.capturedRow][move.capturedCol] = tempPiece === 'b' ? 'r' : 'R'; board[move.fromRow][move.fromCol] = tempPiece;
+                if (isVulnerable) score -= 80; score -= Math.abs(3.5 - move.toCol) * 2;
                 if (score > bestScore) { bestScore = score; bestMove = move; }
             }
             return bestMove;
@@ -695,28 +491,12 @@
         function getBestMoveForPlayer(moves) {
             let bestMove = moves[0], bestScore = -Infinity;
             for (let move of moves) {
-                let score = 0; 
-                if (move.isCapture) score += 100; 
-                if (move.toRow === 0) score += 50;
-                
-                let tempPiece = board[move.fromRow][move.fromCol]; 
-                board[move.fromRow][move.fromCol] = null; 
-                if (move.isCapture) board[move.capturedRow][move.capturedCol] = null; 
-                board[move.toRow][move.toCol] = tempPiece;
-                
+                let score = 0; if (move.isCapture) score += 100; if (move.toRow === 0) score += 50;
+                let tempPiece = board[move.fromRow][move.fromCol]; board[move.fromRow][move.fromCol] = null; if (move.isCapture) board[move.capturedRow][move.capturedCol] = null; board[move.toRow][move.toCol] = tempPiece;
                 let isVulnerable = false;
-                for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) 
-                    if (board[r][c] && board[r][c].toLowerCase() === 'b') { 
-                        let botMoves = getValidMovesForPiece(r, c); 
-                        if (botMoves.some(m => m.isCapture && m.capturedRow === move.toRow && m.capturedCol === move.toCol)) { isVulnerable = true; break; } 
-                    }
-                
-                board[move.toRow][move.toCol] = null; 
-                if (move.isCapture) board[move.capturedRow][move.capturedCol] = tempPiece === 'r' ? 'b' : 'B'; 
-                board[move.fromRow][move.fromCol] = tempPiece;
-                
-                if (isVulnerable) score -= 80; 
-                score -= Math.abs(3.5 - move.toCol) * 2;
+                for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (board[r][c] && board[r][c].toLowerCase() === 'b') { let botMoves = getValidMovesForPiece(r, c); if (botMoves.some(m => m.isCapture && m.capturedRow === move.toRow && m.capturedCol === move.toCol)) { isVulnerable = true; break; } }
+                board[move.toRow][move.toCol] = null; if (move.isCapture) board[move.capturedRow][move.capturedCol] = tempPiece === 'r' ? 'b' : 'B'; board[move.fromRow][move.fromCol] = tempPiece;
+                if (isVulnerable) score -= 80; score -= Math.abs(3.5 - move.toCol) * 2;
                 if (score > bestScore) { bestScore = score; bestMove = move; }
             }
             return bestMove;
@@ -726,7 +506,6 @@
             if (isGameOver) return true;
             const reds = board.flat().filter(p => p && p.toLowerCase() === 'r').length;
             const blacks = board.flat().filter(p => p && p.toLowerCase() === 'b').length;
-            
             if (reds === 0) { showGameOver("Ты проиграл! 🤖", false); return true; }
             if (blacks === 0) { showGameOver("Ты победил! 🎉", true); return true; }
             if (isPlayerTurn && getAllMoves('r').length === 0) { showGameOver("У тебя нет ходов! Ты проиграл.", false); return true; }
@@ -735,24 +514,13 @@
         }
 
         function showGameOver(text, isWin) {
-            isGameOver = true; 
-            isPlayerTurn = false; 
-            clearHints(); 
-            gameOverText.innerText = text; 
-            gameOverText.style.color = isWin ? "#2ecc71" : "#ff4b2b"; 
-            gameOverScreen.style.display = 'flex';
+            isGameOver = true; isPlayerTurn = false; clearHints(); gameOverText.innerText = text; gameOverText.style.color = isWin ? "#2ecc71" : "#ff4b2b"; gameOverScreen.style.display = 'flex';
             if (turnTimer) { clearInterval(turnTimer); turnTimer = null; }
         }
 
-        helperCheckbox.addEventListener('change', () => { 
-            if (!isPlayerTurn || isGameOver) return; 
-            if (helperCheckbox.checked) showHint(); 
-            else { clearHints(); statusElement.innerText = "Твой ход!"; } 
-        });
+        helperCheckbox.addEventListener('change', () => { if (!isPlayerTurn || isGameOver) return; if (helperCheckbox.checked) showHint(); else { clearHints(); statusElement.innerText = "Твой ход!"; } });
 
-        window.startGame = startGame; 
-        window.goToMenu = goToMenu; 
-        window.restartGame = restartGame;
+        window.startGame = startGame; window.goToMenu = goToMenu; window.restartGame = startGame;
     </script>
 </body>
 </html>
