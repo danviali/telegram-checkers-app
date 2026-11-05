@@ -36,7 +36,12 @@
         /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
-        .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Цвета имени в зависимости от цвета шашек */
+        .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
         
         /* Таймер */
@@ -128,7 +133,6 @@
         let onlineBoard = null;
         let onlineTurn = null;
         let isOnlineMode = !!roomId;
-        let myTrophies = 0;
 
         const boardElement = document.getElementById('game-board');
         const statusElement = document.getElementById('status');
@@ -156,9 +160,21 @@
         let timeLeft = TURN_TIME;
         let isAnimating = false;
 
+        // Устанавливаем имя и ЦВЕТ имени
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
+                // Подсвечиваем имя цветом шашек
+                if (isOnlineMode) {
+                    if (myColor === 'white') {
+                        nameElement.classList.add('white-color');
+                    } else if (myColor === 'black') {
+                        nameElement.classList.add('black-color');
+                    }
+                } else {
+                    // В игре с ботом вы всегда красные (по умолчанию)
+                    nameElement.classList.add('black-color'); // Красный цвет из градиента
+                }
             }
             myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
         } catch (e) { myPlayerId = 111; }
@@ -207,11 +223,11 @@
                     }
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
                     
-                    // Проверка на победу (если сервер прислал winner)
+                    // Проверка на победу от сервера
                     if (data.winner && !isGameOver) {
                         isGameOver = true;
                         if (data.winner === myColor) {
-                            showGameOver("Ты победил! 🏆", true);
+                            showGameOver("Ты победил! 🏆 +1 кубок", true);
                         } else {
                             showGameOver("Ты проиграл! 🤖", false);
                         }
@@ -238,7 +254,6 @@
             menuScreen.style.display = 'flex';
         }
 
-        // --- ТАЙМЕР ---
         function startTimer() {
             timeLeft = TURN_TIME;
             updateTimerDisplay();
@@ -278,7 +293,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // --- ОТРИСОВКА ---
         function initOnlineBoard() {
             boardElement.innerHTML = '';
             board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -290,6 +304,7 @@
                     cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     cell.dataset.row = r;
                     cell.dataset.col = c;
+                    // ВАЖНО: Клик всегда обрабатывается на клетке
                     cell.addEventListener('click', (e) => {
                         onCellClickOnline(r, c);
                     });
@@ -358,12 +373,15 @@
         }
 
         function onCellClickOnline(r, c) {
+            // Если сейчас не наш ход, ничего не делаем
             if (!isPlayerTurn) {
                 statusElement.innerText = "Сейчас не твой ход!";
                 return;
             }
+            
             const myPieceColor = (myColor === 'white') ? 'r' : 'b';
 
+            // Если кликнули по своей шашке
             if (board[r][c] && board[r][c].toLowerCase() === myPieceColor) {
                 if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
                     selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Твой ход!"; return;
@@ -371,6 +389,7 @@
                 selectedCell = { r, c }; updatePiecesVisuals(); statusElement.innerText = "Шашка выбрана!"; return;
             }
 
+            // Если шашка выбрана и кликнули по пустой клетке
             if (selectedCell && !board[r][c]) {
                 const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c);
                 const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
