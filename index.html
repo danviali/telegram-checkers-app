@@ -110,8 +110,7 @@
 
     <div id="game-over-screen">
         <div id="game-over-text">Победа!</div>
-        <button class="end-btn primary" onclick="requestRematch()">🔄 Найти нового соперника</button>
-        <button class="end-btn" onclick="tg.close()">🏠 Закрыть игру</button>
+        <button class="end-btn primary" onclick="goToMenu()">🏠 Вернуться в меню</button>
     </div>
 
     <script>
@@ -129,6 +128,7 @@
         let onlineBoard = null;
         let onlineTurn = null;
         let isOnlineMode = !!roomId;
+        let myTrophies = 0;
 
         const boardElement = document.getElementById('game-board');
         const statusElement = document.getElementById('status');
@@ -160,7 +160,8 @@
             if (tg.initDataUnsafe?.user?.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
             }
-        } catch (e) {}
+            myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
+        } catch (e) { myPlayerId = 111; }
 
         // ==========================================
         // ЛОГИКА ОНЛАЙН-РЕЖИМА
@@ -169,8 +170,6 @@
             menuScreen.style.display = 'none';
             waitingScreen.style.display = 'flex';
             
-            myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
-
             async function fetchState() {
                 if (isGameOver) return;
                 
@@ -208,6 +207,17 @@
                     }
                     statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
                     
+                    // Проверка на победу (если сервер прислал winner)
+                    if (data.winner && !isGameOver) {
+                        isGameOver = true;
+                        if (data.winner === myColor) {
+                            showGameOver("Ты победил! 🏆", true);
+                        } else {
+                            showGameOver("Ты проиграл! 🤖", false);
+                        }
+                        return;
+                    }
+
                     if (isPlayerTurn && !turnTimer) {
                         startTimer();
                     } else if (!isPlayerTurn && turnTimer) {
@@ -228,6 +238,7 @@
             menuScreen.style.display = 'flex';
         }
 
+        // --- ТАЙМЕР ---
         function startTimer() {
             timeLeft = TURN_TIME;
             updateTimerDisplay();
@@ -267,6 +278,7 @@
             } catch (e) { console.error(e); }
         }
 
+        // --- ОТРИСОВКА ---
         function initOnlineBoard() {
             boardElement.innerHTML = '';
             board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -392,24 +404,6 @@
                 
                 setTimeout(fetchState, 500);
             } catch (e) { console.error(e); }
-        }
-
-        // --- ФУНКЦИЯ ДЛЯ РЕВАНША ---
-        async function requestRematch() {
-            try {
-                await fetch(`${SERVER_URL}/api/rematch`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        "ngrok-skip-browser-warning": "true"
-                    },
-                    body: JSON.stringify({ player_id: myPlayerId })
-                });
-                tg.close();
-            } catch (e) {
-                console.error("Ошибка:", e);
-                tg.close();
-            }
         }
 
         // --- ОБЩИЕ ФУНКЦИИ ---
