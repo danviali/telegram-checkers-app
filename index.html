@@ -110,15 +110,14 @@
 
     <div id="game-over-screen">
         <div id="game-over-text">Победа!</div>
-        <button class="end-btn primary" onclick="restartGame()">🔄 Играть снова</button>
-        <button class="end-btn" onclick="goToMenu()">🏠 Вернуться в меню</button>
+        <button class="end-btn primary" onclick="requestRematch()">🔄 Найти нового соперника</button>
+        <button class="end-btn" onclick="tg.close()">🏠 Закрыть игру</button>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand(); tg.ready();
 
-        // 🔥 ССЫЛКА НА ВАШ СЕРВЕР (обновляется скриптом start_bot.bat)
         const SERVER_URL = "https://similarly-discount-viability.ngrok-free.dev";
         
         const urlParams = new URLSearchParams(window.location.search);
@@ -268,7 +267,6 @@
             } catch (e) { console.error(e); }
         }
 
-        // --- ОТРИСОВКА (КЛИК ПО КЛЕТКЕ) ---
         function initOnlineBoard() {
             boardElement.innerHTML = '';
             board = Array(8).fill(null).map(() => Array(8).fill(null));
@@ -280,12 +278,9 @@
                     cell.className = `cell ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
                     cell.dataset.row = r;
                     cell.dataset.col = c;
-                    
-                    // Клик по клетке (сработает всегда, даже если внутри шашка)
                     cell.addEventListener('click', (e) => {
                         onCellClickOnline(r, c);
                     });
-                    
                     boardElement.appendChild(cell);
                     cellsDOM[r][c] = cell;
                 }
@@ -357,7 +352,6 @@
             }
             const myPieceColor = (myColor === 'white') ? 'r' : 'b';
 
-            // Если в клетке наша шашка
             if (board[r][c] && board[r][c].toLowerCase() === myPieceColor) {
                 if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
                     selectedCell = null; updatePiecesVisuals(); statusElement.innerText = "Твой ход!"; return;
@@ -365,7 +359,6 @@
                 selectedCell = { r, c }; updatePiecesVisuals(); statusElement.innerText = "Шашка выбрана!"; return;
             }
 
-            // Если шашка выбрана и кликнули по пустой клетке
             if (selectedCell && !board[r][c]) {
                 const moves = getValidMovesForPiece(selectedCell.r, selectedCell.c);
                 const targetMove = moves.find(m => m.toRow === r && m.toCol === c);
@@ -399,6 +392,24 @@
                 
                 setTimeout(fetchState, 500);
             } catch (e) { console.error(e); }
+        }
+
+        // --- ФУНКЦИЯ ДЛЯ РЕВАНША ---
+        async function requestRematch() {
+            try {
+                await fetch(`${SERVER_URL}/api/rematch`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        "ngrok-skip-browser-warning": "true"
+                    },
+                    body: JSON.stringify({ player_id: myPlayerId })
+                });
+                tg.close();
+            } catch (e) {
+                console.error("Ошибка:", e);
+                tg.close();
+            }
         }
 
         // --- ОБЩИЕ ФУНКЦИИ ---
@@ -454,7 +465,6 @@
             for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (board[r][c]) createPieceDOM(r, c, board[r][c]);
         }
 
-        // ВАЖНО: Убрали обработчик клика с шашки (клик ловит клетка)
         function createPieceDOM(r, c, type) {
             const piece = document.createElement('div');
             piece.className = `piece ${type.toLowerCase() === 'r' ? 'red-piece' : 'black-piece'}`;
