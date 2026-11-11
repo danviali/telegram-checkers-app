@@ -182,7 +182,6 @@
             <button class="btn" onclick="drawTile()">Взять тайл</button>
             <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
             <button class="btn btn-orange" onclick="skipTurn()">Пропустить</button>
-            <!-- Кнопка постановки фишки -->
             <button class="btn" onclick="placeMeepleOnLastTile()" style="background: #9b59b6;">Поставить фишку</button>
         </div>
         
@@ -524,7 +523,6 @@
                 return;
             }
 
-            // Ставим фишку
             carBoardData[lastPlacedR][lastPlacedC].meeple = currentPlayer;
             playerMeeples[currentPlayer]--;
             renderCarBoard();
@@ -633,7 +631,6 @@
                 meeple: null
             };
 
-            // Запоминаем последний поставленный тайл для фишки
             lastPlacedR = r;
             lastPlacedC = c;
 
