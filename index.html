@@ -80,17 +80,16 @@
         .player-meeples { font-size: 14px; color: #c9d1d9; }
         .active-player { border: 2px solid #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
 
-        /* Контейнер для поля с зумом */
         #carcassonne-board-wrapper {
             width: 100%;
             max-width: 360px;
             height: 360px;
-            overflow: hidden; /* Обрезаем, если вылезает */
+            overflow: hidden;
             background: #0f131a;
             border-radius: 12px;
             position: relative;
             margin-top: 10px;
-            touch-action: none; /* Для панорамирования */
+            touch-action: none;
         }
 
         #carcassonne-board { 
@@ -104,7 +103,7 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) scale(1); /* Центрируем и масштабируем */
+            transform: translate(-50%, -50%) scale(1);
             transition: transform 0.1s;
         }
         
@@ -174,6 +173,7 @@
                 <span class="player-name red">Игрок 1 (Синие)</span>
             </div>
             <div class="player-meeples" id="player1-meeples">Фишек: 7</div>
+            <div class="player-meeples" id="player1-points">Очки: 0</div>
         </div>
 
         <div id="tile-preview"></div>
@@ -182,11 +182,12 @@
             <button class="btn" onclick="drawTile()">Взять тайл</button>
             <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
             <button class="btn btn-orange" onclick="skipTurn()">Пропустить</button>
+            <!-- Кнопка постановки фишки -->
+            <button class="btn" onclick="placeMeepleOnLastTile()" style="background: #9b59b6;">Поставить фишку</button>
         </div>
         
         <div id="status-text">Нажми "Взять тайл"</div>
 
-        <!-- Обертка с зумом и панорамированием -->
         <div id="carcassonne-board-wrapper">
             <div id="carcassonne-board"></div>
         </div>
@@ -201,6 +202,7 @@
                 <span class="player-name blue">Игрок 2 (Красные)</span>
             </div>
             <div class="player-meeples" id="player2-meeples">Фишек: 7</div>
+            <div class="player-meeples" id="player2-points">Очки: 0</div>
         </div>
 
         <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
@@ -380,10 +382,13 @@
         let currentRotation = 0;
         let currentPlayer = 'red';
         let playerMeeples = { red: 7, blue: 7 };
+        let playerPoints = { red: 0, blue: 0 };
         let carTimer = null;
         let carTimeLeft = 180;
         
-        // Переменные для зума
+        let lastPlacedR = -1;
+        let lastPlacedC = -1;
+        
         let currentZoom = 1.0;
         let isDragging = false;
         let startX = 0, startY = 0;
@@ -440,7 +445,7 @@
 
             wrapper.addEventListener('touchmove', (e) => {
                 if (!isDragging) return;
-                e.preventDefault(); // Предотвращаем скролл страницы
+                e.preventDefault();
                 const dx = e.touches[0].clientX - startX;
                 const dy = e.touches[0].clientY - startY;
                 panX += dx;
@@ -450,11 +455,8 @@
                 updateBoardTransform();
             });
 
-            wrapper.addEventListener('touchend', () => {
-                isDragging = false;
-            });
+            wrapper.addEventListener('touchend', () => { isDragging = false; });
 
-            // Для мыши (на компьютере)
             wrapper.addEventListener('mousedown', (e) => {
                 isDragging = true;
                 startX = e.clientX;
@@ -472,21 +474,16 @@
                 updateBoardTransform();
             });
 
-            wrapper.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-            wrapper.addEventListener('mouseleave', () => {
-                isDragging = false;
-            });
+            wrapper.addEventListener('mouseup', () => { isDragging = false; });
+            wrapper.addEventListener('mouseleave', () => { isDragging = false; });
         }
 
-        // --- ЛОГИКА ПРОПУСКА ХОДА ---
+        // --- ПРОПУСК ХОДА ---
         function skipTurn() {
             if (currentTileIndex === null) {
-                document.getElementById('status-text').innerText = "Сначала возьмите тайл, чтобы проверить, можно ли его поставить!";
+                document.getElementById('status-text').innerText = "Сначала возьмите тайл!";
                 return;
             }
-            // Проверяем, есть ли хоть одно место на поле
             let hasPlace = false;
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
@@ -503,7 +500,6 @@
                 return;
             }
 
-            // Если мест нет — меняем игрока
             document.getElementById('status-text').innerText = `Некуда ставить тайл. Ход переходит к ${currentPlayer === 'red' ? 'Красным' : 'Синим'}.`;
             currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
             currentTileIndex = null;
@@ -511,6 +507,29 @@
             updateCarPreview();
             startCarTimer();
             updateCarUI();
+        }
+
+        // --- ПОСТАНОВКА ФИШКИ ---
+        function placeMeepleOnLastTile() {
+            if (lastPlacedR === -1 || lastPlacedC === -1) {
+                document.getElementById('status-text').innerText = "Сначала поставьте тайл, чтобы поставить на него фишку!";
+                return;
+            }
+            if (carBoardData[lastPlacedR][lastPlacedC].meeple) {
+                document.getElementById('status-text').innerText = "На этом тайле уже стоит фишка!";
+                return;
+            }
+            if (playerMeeples[currentPlayer] <= 0) {
+                document.getElementById('status-text').innerText = "У вас закончились фишки!";
+                return;
+            }
+
+            // Ставим фишку
+            carBoardData[lastPlacedR][lastPlacedC].meeple = currentPlayer;
+            playerMeeples[currentPlayer]--;
+            renderCarBoard();
+            updateCarUI();
+            document.getElementById('status-text').innerText = `Фишка поставлена! Осталось: ${playerMeeples[currentPlayer]}`;
         }
 
         function startCarTimer() {
@@ -539,6 +558,8 @@
         function updateCarUI() {
             document.getElementById('player1-meeples').innerText = `Фишек: ${playerMeeples.red}`;
             document.getElementById('player2-meeples').innerText = `Фишек: ${playerMeeples.blue}`;
+            document.getElementById('player1-points').innerText = `Очки: ${playerPoints.red}`;
+            document.getElementById('player2-points').innerText = `Очки: ${playerPoints.blue}`;
             
             document.getElementById('player1-panel').classList.remove('active-player');
             document.getElementById('player2-panel').classList.remove('active-player');
@@ -612,11 +633,15 @@
                 meeple: null
             };
 
+            // Запоминаем последний поставленный тайл для фишки
+            lastPlacedR = r;
+            lastPlacedC = c;
+
             renderCarBoard();
             currentTileIndex = null;
             currentRotation = 0;
             updateCarPreview();
-            document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}.`;
+            document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}. Можете поставить фишку.`;
             currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
             updateCarUI();
         }
@@ -698,9 +723,9 @@
                 
                 if (isOnlineMode) {
                     if (myColor === 'white') {
-                        nameElement.classList.add('black-color'); // Синий
+                        nameElement.classList.add('black-color');
                     } else if (myColor === 'black') {
-                        nameElement.classList.add('white-color'); // Красный
+                        nameElement.classList.add('white-color');
                     }
                 } else {
                     nameElement.classList.add('white-color');
