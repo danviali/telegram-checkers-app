@@ -66,6 +66,21 @@
         
         /* --- КАРКАССОН --- */
         #carcassonne-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+        
+        /* Панели игроков */
+        .player-panel { 
+            display: flex; justify-content: space-between; align-items: center; 
+            width: 100%; max-width: 360px; padding: 10px; margin-bottom: 10px;
+            background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .player-name { font-weight: bold; font-size: 16px; }
+        .player-name.red { color: #ff007f; }
+        .player-name.blue { color: #00f2fe; }
+        .player-meeples { font-size: 14px; color: #c9d1d9; }
+        .active-player { border: 2px solid #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+
+        /* Поле */
         #carcassonne-board { 
             display: grid; 
             grid-template-columns: repeat(9, 40px); 
@@ -77,6 +92,7 @@
             margin-top: 10px;
             position: relative;
         }
+        
         .car-cell { 
             width: 40px; height: 40px; 
             background: #131821; 
@@ -90,7 +106,7 @@
         .meeple.blue { background: #00f2fe; }
         
         #controls { margin-top: 15px; text-align: center; }
-        #tile-preview { width: 60px; height: 60px; background: #1e2633; border: 2px solid #f1c40f; margin: 10px auto; display: flex; align-items: center; justify-content: center; }
+        #tile-preview { width: 60px; height: 60px; background: #1e2633; border: 2px solid #f1c40f; margin: 10px auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
         #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
         
         .btn { padding: 12px 24px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin: 5px; font-size: 16px; }
@@ -137,14 +153,31 @@
 
     <!-- КАРКАССОН -->
     <div id="carcassonne-screen">
-        <h2 style="color: #f1c40f;">🏰 Каркассон</h2>
+        <div class="player-panel" id="player1-panel">
+            <div class="player-info">
+                <span class="player-name red">Игрок 1 (Синие)</span>
+            </div>
+            <div class="player-meeples" id="player1-meeples">Фишек: 7</div>
+        </div>
+
         <div id="tile-preview"></div>
+        
         <div id="controls">
             <button class="btn" onclick="drawTile()">Взять тайл</button>
             <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
         </div>
+        
         <div id="status-text">Нажми "Взять тайл"</div>
+        
         <div id="carcassonne-board"></div>
+
+        <div class="player-panel" id="player2-panel" style="margin-top: 10px;">
+            <div class="player-info">
+                <span class="player-name blue">Игрок 2 (Красные)</span>
+            </div>
+            <div class="player-meeples" id="player2-meeples">Фишек: 7</div>
+        </div>
+
         <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
     </div>
 
@@ -199,117 +232,117 @@
         let isAnimating = false;
 
         // ==========================================
-        // БАЗА ДАННЫХ ВСЕХ 108 ТАЙЛОВ (КАРКАССОН)
+        // БАЗА ДАННЫХ ВСЕХ 108 ТАЙЛОВ (ВАША БАЗА)
         // ==========================================
         const TILE_DATA = {
-            1: { top: "F", right: "F", bottom: "C", left: "C" },
-            2: { top: "F", right: "F", bottom: "C", left: "C" },
-            3: { top: "F", right: "F", bottom: "C", left: "C" },
-            4: { top: "C", right: "R", bottom: "F", left: "F" },
-            5: { top: "F", right: "F", bottom: "R", left: "C" },
-            6: { top: "C", right: "F", bottom: "R", left: "F" },
-            7: { top: "F", right: "F", bottom: "R", left: "C" },
-            8: { top: "F", right: "R", bottom: "R", left: "R" },
-            9: { top: "F", right: "R", bottom: "R", left: "R" },
-            10: { top: "F", right: "R", bottom: "R", left: "R" },
-            11: { top: "F", right: "R", bottom: "F", left: "F" },
-            12: { top: "F", right: "F", bottom: "C", left: "C" },
-            13: { top: "F", right: "F", bottom: "C", left: "C" },
-            14: { top: "F", right: "F", bottom: "C", left: "C" },
-            15: { top: "C", right: "R", bottom: "F", left: "F" },
-            16: { top: "C", right: "F", bottom: "R", left: "F" },
-            17: { top: "F", right: "F", bottom: "R", left: "C" },
-            18: { top: "F", right: "R", bottom: "R", left: "F" },
-            19: { top: "M", right: "F", bottom: "F", left: "F" },
-            20: { top: "C", right: "F", bottom: "F", left: "F" },
-            21: { top: "C", right: "C", bottom: "C", left: "C" },
-            22: { top: "F", right: "F", bottom: "C", left: "C" },
-            23: { top: "C", right: "F", bottom: "F", left: "F" },
-            24: { top: "F", right: "W", bottom: "C", left: "F" },
-            25: { top: "F", right: "F", bottom: "C", left: "C" },
-            26: { top: "F", right: "C", bottom: "C", left: "C" },
-            27: { top: "F", right: "F", bottom: "W", left: "W" },
-            28: { top: "F", right: "W", bottom: "W", left: "F" },
-            29: { top: "F", right: "W", bottom: "F", left: "W" },
-            30: { top: "F", right: "F", bottom: "W", left: "W" },
-            31: { top: "M", right: "F", bottom: "F", left: "F" },
-            32: { top: "C", right: "R", bottom: "F", left: "F" },
-            33: { top: "F", right: "F", bottom: "R", left: "C" },
-            34: { top: "W", right: "R", bottom: "W", left: "R" },
-            35: { top: "F", right: "R", bottom: "W", left: "W" },
-            36: { top: "W", right: "F", bottom: "F", left: "W" },
-            37: { top: "F", right: "W", bottom: "F", left: "W" },
-            38: { top: "F", right: "F", bottom: "R", left: "W" },
-            39: { top: "C", right: "F", bottom: "F", left: "F" },
-            40: { top: "F", right: "C", bottom: "F", left: "C" },
-            41: { top: "C", right: "C", bottom: "C", left: "C" },
-            42: { top: "F", right: "W", bottom: "F", left: "W" },
-            43: { top: "F", right: "W", bottom: "W", left: "F" },
-            44: { top: "F", right: "F", bottom: "W", left: "W" },
-            45: { top: "F", right: "W", bottom: "W", left: "F" },
-            46: { top: "F", right: "W", bottom: "F", left: "W" },
-            47: { top: "F", right: "F", bottom: "F", left: "F" },
-            48: { top: "F", right: "F", bottom: "F", left: "F" },
-            49: { top: "C", right: "R", bottom: "F", left: "F" },
-            50: { top: "F", right: "R", bottom: "C", left: "F" },
-            51: { top: "C", right: "F", bottom: "W", left: "R" },
-            52: { top: "R", right: "R", bottom: "W", left: "F" },
-            53: { top: "R", right: "R", bottom: "R", left: "R" },
-            54: { top: "C", right: "C", bottom: "R", left: "F" },
-            55: { top: "R", right: "F", bottom: "F", left: "R" },
-            56: { top: "C", right: "C", bottom: "F", left: "R" },
-            57: { top: "F", right: "R", bottom: "F", left: "C" },
-            58: { top: "F", right: "R", bottom: "R", left: "F" },
-            59: { top: "R", right: "R", bottom: "R", left: "F" },
-            60: { top: "W", right: "C", bottom: "W", left: "R" },
-            61: { top: "W", right: "C", bottom: "W", left: "C" },
-            62: { top: "R", right: "R", bottom: "F", left: "C" },
-            63: { top: "R", right: "R", bottom: "R", left: "F" },
-            64: { top: "W", right: "F", bottom: "W", left: "F" },
-            65: { top: "W", right: "F", bottom: "W", left: "F" },
-            66: { top: "R", right: "R", bottom: "F", left: "R" },
-            67: { top: "R", right: "R", bottom: "R", left: "F" },
-            68: { top: "W", right: "R", bottom: "W", left: "W" },
-            69: { top: "W", right: "W", bottom: "W", left: "W" },
-            70: { top: "F", right: "W", bottom: "F", left: "W" },
-            71: { top: "F", right: "F", bottom: "W", left: "F" },
-            72: { top: "F", right: "R", bottom: "R", left: "R" },
-            73: { top: "W", right: "F", bottom: "W", left: "R" },
-            74: { top: "F", right: "C", bottom: "F", left: "W" },
-            75: { top: "R", right: "C", bottom: "F", left: "R" },
-            76: { top: "C", right: "F", bottom: "F", left: "R" },
-            77: { top: "F", right: "R", bottom: "F", left: "F" },
-            78: { top: "F", right: "C", bottom: "F", left: "R" },
-            79: { top: "C", right: "R", bottom: "C", left: "C" },
-            80: { top: "F", right: "R", bottom: "F", left: "C" },
-            81: { top: "F", right: "R", bottom: "F", left: "F" },
-            82: { top: "C", right: "C", bottom: "C", left: "C" },
-            83: { top: "F", right: "R", bottom: "F", left: "C" },
-            84: { top: "R", right: "C", bottom: "F", left: "F" },
-            85: { top: "C", right: "F", bottom: "C", left: "C" },
-            86: { top: "R", right: "R", bottom: "R", left: "R" },
-            87: { top: "F", right: "F", bottom: "R", left: "F" },
-            88: { top: "F", right: "C", bottom: "F", left: "F" },
-            89: { top: "F", right: "C", bottom: "F", left: "F" },
-            90: { top: "F", right: "C", bottom: "C", left: "C" },
-            91: { top: "C", right: "F", bottom: "F", left: "C" },
-            92: { top: "C", right: "C", bottom: "C", left: "C" },
-            93: { top: "C", right: "C", bottom: "C", left: "C" },
-            94: { top: "F", right: "C", bottom: "F", left: "C" },
-            95: { top: "C", right: "F", bottom: "F", left: "F" },
-            96: { top: "F", right: "C", bottom: "F", left: "C" },
-            97: { top: "F", right: "C", bottom: "F", left: "F" },
-            98: { top: "F", right: "F", bottom: "R", left: "F" },
-            99: { top: "F", right: "R", bottom: "F", left: "R" },
-            100: { top: "C", right: "F", bottom: "C", left: "C" },
-            101: { top: "F", right: "C", bottom: "C", left: "F" },
-            102: { top: "R", right: "F", bottom: "R", left: "C" },
-            103: { top: "C", right: "C", bottom: "F", left: "C" },
-            104: { top: "R", right: "F", bottom: "F", left: "F" },
-            105: { top: "F", right: "R", bottom: "F", left: "R" },
-            106: { top: "R", right: "R", bottom: "R", left: "R" },
-            107: { top: "C", right: "R", bottom: "R", left: "F" },
-            108: { top: "R", right: "F", bottom: "R", left: "F" }
+            1: { top: "F", right: "R", bottom: "F", left: "R" },
+            2: { top: "F", right: "R", bottom: "F", left: "R" },
+            3: { top: "F", right: "R", bottom: "F", left: "R" },
+            4: { top: "F", right: "R", bottom: "F", left: "R" },
+            5: { top: "F", right: "F", bottom: "F", left: "F", center: "M" },
+            6: { top: "F", right: "F", bottom: "F", left: "F", center: "M" },
+            7: { top: "F", right: "F", bottom: "F", left: "F", center: "M" },
+            8: { top: "F", right: "F", bottom: "F", left: "F", center: "M" },
+            9: { top: "F", right: "R", bottom: "F", left: "F", center: "M" },
+            10: { top: "F", right: "W", bottom: "C", left: "W" },
+            11: { top: "F", right: "F", bottom: "C", left: "F" },
+            12: { top: "F", right: "F", bottom: "C", left: "F" },
+            13: { top: "F", right: "F", bottom: "C", left: "F" },
+            14: { top: "W", right: "F", bottom: "C", left: "F" },
+            15: { top: "W", right: "C", bottom: "F", left: "F" },
+            16: { top: "C", right: "F", bottom: "F", left: "C" },
+            17: { top: "C", right: "C", bottom: "F", left: "F" },
+            18: { top: "C", right: "F", bottom: "C", left: "F" },
+            19: { top: "C", right: "C", bottom: "F", left: "F" },
+            20: { top: "C", right: "F", bottom: "C", left: "F" },
+            21: { top: "C", right: "R", bottom: "R", left: "C" },
+            22: { top: "C", right: "C", bottom: "R", left: "R" },
+            23: { top: "R", right: "R", bottom: "C", left: "F" },
+            24: { top: "C", right: "R", bottom: "R", left: "C" },
+            25: { top: "C", right: "C", bottom: "R", left: "R" },
+            26: { top: "F", right: "F", bottom: "C", left: "F" },
+            27: { top: "F", right: "F", bottom: "C", left: "F" },
+            28: { top: "F", right: "C", bottom: "C", left: "F" },
+            29: { top: "F", right: "C", bottom: "C", left: "F" },
+            30: { top: "F", right: "F", bottom: "C", left: "F" },
+            31: { top: "C", right: "C", bottom: "C", left: "F" },
+            32: { top: "C", right: "F", bottom: "C", left: "C" },
+            33: { top: "C", right: "R", bottom: "R", left: "R" },
+            34: { top: "C", right: "C", bottom: "R", left: "R" },
+            35: { top: "C", right: "F", bottom: "F", left: "C" },
+            36: { top: "C", right: "C", bottom: "F", left: "F" },
+            37: { top: "R", right: "R", bottom: "F", left: "F" },
+            38: { top: "F", right: "C", bottom: "R", left: "R" },
+            39: { top: "C", right: "C", bottom: "C", left: "C" },
+            40: { top: "F", right: "F", bottom: "C", left: "C" },
+            41: { top: "C", right: "F", bottom: "C", left: "F", crest: true },
+            42: { top: "R", right: "C", bottom: "C", left: "C", crest: true },
+            43: { top: "C", right: "C", bottom: "C", left: "C" },
+            44: { top: "C", right: "C", bottom: "C", left: "C", crest: true },
+            45: { top: "C", right: "C", bottom: "R", left: "C", crest: true },
+            46: { top: "F", right: "F", bottom: "C", left: "C", crown: true },
+            47: { top: "W", right: "W", bottom: "F", left: "F" },
+            48: { top: "F", right: "W", bottom: "W", left: "F" },
+            49: { top: "C", right: "C", bottom: "F", left: "F", crown: true },
+            50: { top: "C", right: "F", bottom: "F", left: "C" },
+            51: { top: "F", right: "R", bottom: "R", left: "F" },
+            52: { top: "R", right: "F", bottom: "F", left: "R" },
+            53: { top: "W", right: "C", bottom: "W", left: "R", crown: true },
+            54: { top: "W", right: "R", bottom: "W", left: "R", crown: true },
+            55: { top: "R", right: "R", bottom: "F", left: "C" },
+            56: { top: "W", right: "F", bottom: "F", left: "F", crown: true },
+            57: { top: "W", right: "W", bottom: "W", left: "W" },
+            58: { top: "R", right: "F", bottom: "F", left: "F" },
+            59: { top: "R", right: "R", bottom: "F", left: "R" },
+            60: { top: "R", right: "F", bottom: "R", left: "R", crown: true },
+            61: { top: "F", right: "W", bottom: "W", left: "F", crown: true },
+            62: { top: "F", right: "R", bottom: "R", left: "W", crown: true },
+            63: { top: "F", right: "R", bottom: "F", left: "R" },
+            64: { top: "R", right: "R", bottom: "F", left: "R" },
+            65: { top: "W", right: "W", bottom: "C", left: "C" },
+            66: { top: "R", right: "W", bottom: "R", left: "W", crown: true },
+            67: { top: "F", right: "W", bottom: "F", left: "W", crest: true },
+            68: { top: "F", right: "C", bottom: "F", left: "W", crown: true },
+            69: { top: "C", right: "F", bottom: "C", left: "C", crest: true },
+            70: { top: "R", right: "R", bottom: "F", left: "F" },
+            71: { top: "F", right: "F", bottom: "R", left: "R" },
+            72: { top: "F", right: "F", bottom: "R", left: "R" },
+            73: { top: "F", right: "R", bottom: "F", left: "C" },
+            74: { top: "C", right: "R", bottom: "C", left: "R", crest: true },
+            75: { top: "R", right: "F", bottom: "R", left: "R" },
+            76: { top: "C", right: "R", bottom: "F", left: "C", crest: true },
+            77: { top: "C", right: "C", bottom: "F", left: "F", crown: true },
+            78: { top: "C", right: "F", bottom: "C", left: "C", crest: true },
+            79: { top: "R", right: "F", bottom: "R", left: "F", crown: true },
+            80: { top: "C", right: "C", bottom: "F", left: "C", crest: true },
+            81: { top: "F", right: "C", bottom: "C", left: "C" },
+            82: { top: "C", right: "F", bottom: "R", left: "C" },
+            83: { top: "R", right: "F", bottom: "R", left: "F" },
+            84: { top: "C", right: "C", bottom: "F", left: "F", crest: true },
+            85: { top: "F", right: "F", bottom: "F", left: "F", center: "M" },
+            86: { top: "F", right: "R", bottom: "C", left: "C", crest: true },
+            87: { top: "R", right: "R", bottom: "R", left: "R" },
+            88: { top: "C", right: "C", bottom: "F", left: "R", crest: true },
+            89: { top: "F", right: "F", bottom: "F", left: "F", center: "M" },
+            90: { top: "C", right: "C", bottom: "C", left: "C" },
+            91: { top: "R", right: "R", bottom: "R", left: "R" },
+            92: { top: "C", right: "R", bottom: "F", left: "C", crest: true },
+            93: { top: "C", right: "R", bottom: "R", left: "C" },
+            94: { top: "C", right: "F", bottom: "R", left: "R" },
+            95: { top: "R", right: "R", bottom: "F", left: "F" },
+            96: { top: "R", right: "R", bottom: "R", left: "R" },
+            97: { top: "F", right: "R", bottom: "R", left: "C" },
+            98: { top: "F", right: "R", bottom: "F", left: "R" },
+            99: { top: "F", right: "C", bottom: "R", left: "R" },
+            100: { top: "C", right: "R", bottom: "F", left: "C" },
+            101: { top: "R", right: "F", bottom: "R", left: "F" },
+            102: { top: "F", right: "C", bottom: "F", left: "F" },
+            103: { top: "R", right: "F", bottom: "R", left: "C" },
+            104: { top: "F", right: "C", bottom: "F", left: "C", crest: true },
+            105: { top: "R", right: "R", bottom: "F", left: "F" },
+            106: { top: "F", right: "R", bottom: "F", left: "R" },
+            107: { top: "R", right: "R", bottom: "R", left: "R" },
+            108: { top: "R", right: "R", bottom: "R", left: "R" }
         };
 
         const BOARD_SIZE = 9;
@@ -321,6 +354,9 @@
         let currentTileIndex = null;
         let currentRotation = 0;
         let currentPlayer = 'red';
+        let playerMeeples = { red: 7, blue: 7 };
+        let carTimer = null;
+        let carTimeLeft = 180;
 
         function initCarcassonne() {
             document.getElementById('carcassonne-screen').style.display = 'flex';
@@ -343,7 +379,44 @@
                     boardEl.appendChild(cell);
                 }
             }
-            document.getElementById('status-text').innerText = "Нажми 'Взять тайл', чтобы начать";
+            updateCarUI();
+            startCarTimer();
+        }
+
+        function startCarTimer() {
+            carTimeLeft = 180;
+            updateCarTimerDisplay();
+            if (carTimer) clearInterval(carTimer);
+            carTimer = setInterval(() => {
+                carTimeLeft--;
+                updateCarTimerDisplay();
+                if (carTimeLeft <= 0) {
+                    clearInterval(carTimer);
+                    document.getElementById('status-text').innerText = "Время вышло! Ход переходит.";
+                    currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
+                    startCarTimer();
+                    updateCarUI();
+                }
+            }, 1000);
+        }
+
+        function updateCarTimerDisplay() {
+            const minutes = Math.floor(carTimeLeft / 60);
+            const seconds = carTimeLeft % 60;
+            document.getElementById('status-text').innerText = `Ход: ${currentPlayer === 'red' ? 'Синие' : 'Красные'} | Время: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateCarUI() {
+            document.getElementById('player1-meeples').innerText = `Фишек: ${playerMeeples.red}`;
+            document.getElementById('player2-meeples').innerText = `Фишек: ${playerMeeples.blue}`;
+            
+            document.getElementById('player1-panel').classList.remove('active-player');
+            document.getElementById('player2-panel').classList.remove('active-player');
+            if (currentPlayer === 'red') {
+                document.getElementById('player1-panel').classList.add('active-player');
+            } else {
+                document.getElementById('player2-panel').classList.add('active-player');
+            }
         }
 
         function drawTile() {
@@ -354,7 +427,6 @@
             currentTileIndex = Math.floor(Math.random() * TOTAL_TILES) + 1;
             currentRotation = 0;
             updateCarPreview();
-            document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}. Нажмите на клетку поля.`;
         }
 
         function rotateTile() {
@@ -416,6 +488,7 @@
             updateCarPreview();
             document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}.`;
             currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
+            updateCarUI();
         }
 
         function checkCarPlacement(r, c) {
