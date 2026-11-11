@@ -7,9 +7,9 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 10px; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 10px; overflow: hidden; }
         
-        /* --- МЕНЮ --- */
+        /* --- МЕНЮ (ШАШКИ) --- */
         #menu-screen { display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10; width: 100%; }
         .menu-btn { padding: 15px 30px; font-size: 18px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s; width: 250px; color: white; }
         .menu-btn:active { transform: scale(0.95); }
@@ -37,9 +37,8 @@
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
-        
-        .header h1.white-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header h1.black-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
         #timer-display { display: none; position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; font-size: 14px; color: #f1c40f; font-weight: 700; z-index: 20; }
@@ -66,100 +65,91 @@
         .fade-out { opacity: 0; transform: scale(0); }
         
         /* --- КАРКАССОН --- */
-        #carcassonne-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+        #carcassonne-screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 600px; }
         
-        .player-panel { 
-            display: flex; justify-content: space-between; align-items: center; 
-            width: 100%; max-width: 360px; padding: 10px; margin-bottom: 10px;
-            background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
-        }
-        .player-info { display: flex; align-items: center; gap: 10px; }
-        .player-name { font-weight: bold; font-size: 16px; }
-        .player-name.red { color: #ff007f; }
-        .player-name.blue { color: #00f2fe; }
-        .player-meeples { font-size: 14px; color: #c9d1d9; }
-        .active-player { border: 2px solid #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
-
-        #carcassonne-board-wrapper {
+        .player-panel {
             width: 100%;
-            max-width: 360px;
-            height: 360px;
-            overflow: hidden;
-            background: #0f131a;
-            border-radius: 12px;
-            position: relative;
-            margin-top: 10px;
-            touch-action: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: #1e2633;
+            border-radius: 10px;
+            margin: 5px 0;
+            border: 2px solid transparent;
+            font-size: 16px;
+            font-weight: bold;
         }
-
+        .player-panel.active { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+        
+        .blue-name { color: #00f2fe; }
+        .red-name { color: #ff007f; }
+        
+        #controls-top { display: flex; flex-direction: column; align-items: center; width: 100%; margin: 10px 0; }
+        
+        #tile-preview { 
+            width: 90px; height: 90px; 
+            background: #1e2633; 
+            border: 3px solid #f1c40f; 
+            margin-bottom: 10px; 
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn:active { transform: scale(0.95); }
+        .btn-green { background: #2ecc71; }
+        .btn-orange { background: #e67e22; }
+        .btn-purple { background: #9b59b6; }
+        
+        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; }
+        
+        #board-container {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            background: #0f131a;
+            padding: 5px;
+            border-radius: 10px;
+            border: 1px solid #1e2633;
+        }
+        
         #carcassonne-board { 
             display: grid; 
-            grid-template-columns: repeat(12, 40px); 
-            grid-template-rows: repeat(12, 40px); 
+            grid-template-columns: repeat(15, 45px); 
+            grid-template-rows: repeat(15, 45px); 
             gap: 1px; 
             background: #1e2633; 
             padding: 5px; 
             border-radius: 8px; 
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(1);
-            transition: transform 0.1s;
+            position: relative;
+            margin: 0 auto;
         }
         
         .car-cell { 
-            width: 40px; height: 40px; 
+            width: 45px; height: 45px; 
             background: #131821; 
             display: flex; align-items: center; justify-content: center; 
             cursor: pointer;
             position: relative;
         }
+        
         .tile-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-        .meeple { width: 14px; height: 14px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px solid white; z-index: 10; }
+        
+        .meeple { 
+            width: 16px; height: 16px; 
+            border-radius: 50%; 
+            position: absolute; 
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid white;
+            z-index: 10;
+        }
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
-        
-        /* Модальное окно для увеличения карточки */
-        #zoom-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            padding: 20px;
-        }
-        #zoom-modal img {
-            max-width: 90%;
-            max-height: 80%;
-            border: 3px solid #f1c40f;
-            border-radius: 12px;
-        }
-        #zoom-modal button {
-            margin-top: 20px;
-            padding: 12px 30px;
-            background: #ff4b2b;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        #controls { margin-top: 15px; text-align: center; }
-        #tile-preview { width: 60px; height: 60px; background: #1e2633; border: 2px solid #f1c40f; margin: 10px auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; }
-        #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .btn { padding: 12px 24px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin: 5px; font-size: 16px; }
-        .btn:active { transform: scale(0.95); }
-        .btn-green { background: #2ecc71; }
-        .btn-orange { background: #e67e22; }
-        
-        #status-text { margin-top: 10px; font-size: 14px; color: #c9d1d9; min-height: 20px; }
     </style>
 </head>
 <body>
@@ -200,48 +190,32 @@
     <!-- КАРКАССОН -->
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
-            <div class="player-info">
-                <span class="player-name red">Игрок 1 (Синие)</span>
-            </div>
-            <div class="player-meeples" id="player1-meeples">7</div>
-            <div class="player-meeples" id="player1-points">0</div>
+            <span class="blue-name">Игрок 1 (Синие)</span>
+            <span>Фишек: <span id="player1-meeples">7</span></span>
         </div>
 
-        <div id="tile-preview"></div>
-        
-        <div id="controls">
-            <button class="btn" onclick="drawTile()">Взять тайл</button>
-            <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
-            <button class="btn btn-orange" onclick="skipTurn()">Пропустить</button>
-            <button class="btn" onclick="placeMeepleOnLastTile()" style="background: #9b59b6;">Поставить фишку</button>
+        <div id="controls-top">
+            <div id="tile-preview"></div>
+            <div class="btn-row">
+                <button class="btn" onclick="drawTile()">Взять тайл</button>
+                <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
+            </div>
+            <div class="btn-row" style="margin-top: 10px;">
+                <button class="btn btn-orange" onclick="skipTurn()">Пропустить</button>
+                <button class="btn btn-purple" onclick="placeMeeple()">Поставить фишку</button>
+            </div>
         </div>
         
         <div id="status-text">Нажми "Взять тайл"</div>
-
-        <div id="carcassonne-board-wrapper">
+        
+        <div id="board-container">
             <div id="carcassonne-board"></div>
         </div>
 
-        <div style="display:flex; gap: 10px; margin-top: 10px;">
-            <button class="btn" onclick="changeZoom(0.2)" style="padding: 8px 16px; font-size: 14px;">➕ Увеличить</button>
-            <button class="btn" onclick="changeZoom(-0.2)" style="padding: 8px 16px; font-size: 14px;">➖ Уменьшить</button>
+        <div class="player-panel" id="player2-panel">
+            <span class="red-name">Игрок 2 (Красные)</span>
+            <span>Фишек: <span id="player2-meeples">7</span></span>
         </div>
-
-        <div class="player-panel" id="player2-panel" style="margin-top: 10px;">
-            <div class="player-info">
-                <span class="player-name blue">Игрок 2 (Красные)</span>
-            </div>
-            <div class="player-meeples" id="player2-meeples">7</div>
-            <div class="player-meeples" id="player2-points">0</div>
-        </div>
-
-        <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
-    </div>
-
-    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ УВЕЛИЧЕНИЯ -->
-    <div id="zoom-modal" onclick="closeZoom()">
-        <img id="zoom-img" src="">
-        <button>Закрыть</button>
     </div>
 
     <!-- КОНЕЦ ИГРЫ -->
@@ -295,140 +269,24 @@
         let isAnimating = false;
 
         // ==========================================
-        // БАЗА ДАННЫХ ВСЕХ 108 ТАЙЛОВ
+        // КАРКАССОН
         // ==========================================
-        const TILE_DATA = {
-            1: { left: "R", top: "F", right: "R", bottom: "F" },
-            2: { left: "R", top: "F", right: "R", bottom: "F" },
-            3: { left: "R", top: "F", right: "R", bottom: "F" },
-            4: { left: "R", top: "F", right: "R", bottom: "F" },
-            5: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            6: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            7: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            8: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            9: { left: "F", top: "R", right: "F", bottom: "F", center: "M" },
-            10: { left: "R", top: "F", right: "R", bottom: "C" },
-            11: { left: "R", top: "F", right: "R", bottom: "C" },
-            12: { left: "R", top: "F", right: "F", bottom: "F", center: "M" },
-            13: { left: "F", top: "F", right: "F", bottom: "C" },
-            14: { left: "F", top: "F", right: "F", bottom: "C" },
-            15: { left: "F", top: "C", right: "F", bottom: "F" },
-            16: { left: "F", top: "C", right: "F", bottom: "C" },
-            17: { left: "F", top: "C", right: "F", bottom: "C" },
-            18: { left: "F", top: "F", right: "F", bottom: "C" },
-            19: { left: "F", top: "C", right: "F", bottom: "C" },
-            20: { left: "F", top: "C", right: "F", bottom: "C" },
-            21: { left: "C", top: "C", right: "R", bottom: "R", crest: true },
-            22: { left: "R", top: "C", right: "C", bottom: "R", crest: true },
-            23: { left: "C", top: "C", right: "R", bottom: "R" },
-            24: { left: "R", top: "C", right: "C", bottom: "R" },
-            25: { left: "F", top: "R", right: "R", bottom: "C" },
-            26: { left: "F", top: "R", right: "R", bottom: "C" },
-            27: { left: "R", top: "R", right: "F", bottom: "C" },
-            28: { left: "R", top: "R", right: "F", bottom: "C" },
-            29: { left: "F", top: "C", right: "C", bottom: "C", crest: true },
-            30: { left: "C", top: "C", right: "F", bottom: "C" },
-            31: { left: "F", top: "C", right: "C", bottom: "C" },
-            32: { left: "C", top: "C", right: "F", bottom: "C" },
-            33: { left: "R", top: "C", right: "R", bottom: "R" },
-            34: { left: "R", top: "C", right: "C", bottom: "R" },
-            35: { left: "C", top: "C", right: "F", bottom: "F", crest: true },
-            36: { left: "F", top: "C", right: "C", bottom: "F" },
-            37: { left: "F", top: "R", right: "R", bottom: "F" },
-            38: { left: "R", top: "R", right: "C", bottom: "R" },
-            39: { left: "C", top: "F", right: "C", bottom: "F", crest: true },
-            40: { left: "C", top: "F", right: "F", bottom: "C" },
-            41: { left: "F", top: "F", right: "C", bottom: "C", crest: true },
-            42: { left: "C", top: "R", right: "C", bottom: "C", crest: true },
-            43: { left: "C", top: "F", right: "C", bottom: "F" },
-            44: { left: "C", top: "C", right: "C", bottom: "C", crest: true },
-            45: { left: "C", top: "C", right: "C", bottom: "R", crest: true },
-            46: { left: "C", top: "C", right: "F", bottom: "F" },
-            47: { left: "C", top: "C", right: "F", bottom: "F" },
-            48: { left: "F", top: "F", right: "C", bottom: "C" },
-            49: { left: "F", top: "F", right: "F", bottom: "W" },
-            50: { left: "F", top: "F", right: "F", bottom: "W" },
-            51: { left: "F", top: "F", right: "R", bottom: "R" },
-            52: { left: "R", top: "R", right: "F", bottom: "R" },
-            53: { left: "R", top: "W", right: "C", bottom: "W" },
-            54: { left: "C", top: "W", right: "C", bottom: "W" },
-            55: { left: "C", top: "R", right: "R", bottom: "R" },
-            56: { left: "R", top: "R", right: "F", bottom: "R" },
-            57: { left: "F", top: "W", right: "W", bottom: "F" },
-            58: { left: "W", top: "W", right: "F", bottom: "W" },
-            59: { left: "F", top: "R", right: "R", bottom: "F" },
-            60: { left: "R", top: "R", right: "F", bottom: "R" },
-            61: { left: "F", top: "F", right: "W", bottom: "W" },
-            62: { left: "W", top: "W", right: "R", bottom: "R" },
-            63: { left: "R", top: "F", right: "R", bottom: "F" },
-            64: { left: "R", top: "R", right: "R", bottom: "F" },
-            65: { left: "C", top: "W", right: "W", bottom: "C", crest: true },
-            66: { left: "W", top: "R", right: "W", bottom: "R" },
-            67: { left: "W", top: "F", right: "W", bottom: "F", center: "M" },
-            68: { left: "W", top: "F", right: "C", bottom: "F" },
-            69: { left: "C", top: "C", right: "F", bottom: "C" },
-            70: { left: "F", top: "R", right: "R", bottom: "F" },
-            71: { left: "R", top: "F", right: "F", bottom: "R" },
-            72: { left: "F", top: "F", right: "R", bottom: "R" },
-            73: { left: "C", top: "F", right: "R", bottom: "F" },
-            74: { left: "R", top: "C", right: "R", bottom: "C", crest: true },
-            75: { left: "R", top: "R", right: "F", bottom: "R" },
-            76: { left: "F", top: "C", right: "R", bottom: "C" },
-            77: { left: "F", top: "F", right: "C", bottom: "F" },
-            78: { left: "C", top: "C", right: "F", bottom: "C", crest: true },
-            79: { left: "F", top: "R", right: "F", bottom: "R", center: "M" },
-            80: { left: "F", top: "C", right: "F", bottom: "C" },
-            81: { left: "C", top: "F", right: "C", bottom: "C" },
-            82: { left: "C", top: "C", right: "F", bottom: "R" },
-            83: { left: "F", top: "R", right: "F", bottom: "R" },
-            84: { left: "F", top: "C", right: "C", bottom: "F" },
-            85: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            86: { left: "C", top: "R", right: "R", bottom: "C", crest: true },
-            87: { left: "R", top: "R", right: "R", bottom: "R" },
-            88: { left: "R", top: "F", right: "C", bottom: "C" },
-            89: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            90: { left: "C", top: "C", right: "C", bottom: "C" },
-            91: { left: "C", top: "R", right: "C", bottom: "R" },
-            92: { left: "C", top: "C", right: "R", bottom: "R" },
-            93: { left: "C", top: "C", right: "R", bottom: "F" },
-            94: { left: "R", top: "C", right: "F", bottom: "R" },
-            95: { left: "F", top: "R", right: "R", bottom: "F" },
-            96: { left: "R", top: "R", right: "R", bottom: "R" },
-            97: { left: "C", top: "F", right: "R", bottom: "R" },
-            98: { left: "R", top: "F", right: "R", bottom: "F" },
-            99: { left: "R", top: "F", right: "C", bottom: "R" },
-            100: { left: "C", top: "C", right: "R", bottom: "C" },
-            101: { left: "F", top: "R", right: "F", bottom: "R" },
-            102: { left: "F", top: "F", right: "C", bottom: "F" },
-            103: { left: "C", top: "R", right: "F", bottom: "R" },
-            104: { left: "F", top: "C", right: "F", bottom: "C", crest: true },
-            105: { left: "F", top: "R", right: "R", bottom: "F" },
-            106: { left: "R", top: "F", right: "R", bottom: "F" },
-            107: { left: "R", top: "R", right: "R", bottom: "R" },
-            108: { left: "R", top: "C", right: "R", bottom: "F" }
-        };
-
-        const BOARD_SIZE = 12;
+        const BOARD_SIZE = 15;
         const TILE_FOLDER = ""; 
         const TOTAL_TILES = 108;
-        const FILE_EXTENSION = ".jpg"; 
+        const FILE_EXTENSION = ".jpg";
+        const CAR_TURN_TIME = 180;
 
         let carBoardData = [];
         let currentTileIndex = null;
         let currentRotation = 0;
-        let currentPlayer = 'red';
-        let playerMeeples = { red: 7, blue: 7 };
-        let playerPoints = { red: 0, blue: 0 };
-        let carTimer = null;
-        let carTimeLeft = 180;
+        let currentPlayer = 'blue'; 
         
-        let lastPlacedR = -1;
-        let lastPlacedC = -1;
-        
-        let currentZoom = 1.0;
-        let isDragging = false;
-        let startX = 0, startY = 0;
-        let panX = 0, panY = 0;
+        let blueMeeples = 7;
+        let redMeeples = 7;
+        let carTimeLeft = CAR_TURN_TIME;
+        let carTurnTimer = null;
+        let isMeepleMode = false; 
 
         function initCarcassonne() {
             document.getElementById('carcassonne-screen').style.display = 'flex';
@@ -451,170 +309,14 @@
                     boardEl.appendChild(cell);
                 }
             }
-            updateCarUI();
-            startCarTimer();
-            updateBoardTransform();
-            addPanListeners();
-        }
-
-        // --- ЗУМ И ПАНОРАМИРОВАНИЕ ---
-        function changeZoom(delta) {
-            currentZoom += delta;
-            if (currentZoom < 0.5) currentZoom = 0.5;
-            if (currentZoom > 5) currentZoom = 5;
-            updateBoardTransform();
-        }
-
-        function updateBoardTransform() {
-            const boardEl = document.getElementById('carcassonne-board');
-            boardEl.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${currentZoom})`;
-        }
-
-        function addPanListeners() {
-            const wrapper = document.getElementById('carcassonne-board-wrapper');
             
-            wrapper.addEventListener('touchstart', (e) => {
-                isDragging = true;
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            });
-
-            wrapper.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                e.preventDefault();
-                const dx = e.touches[0].clientX - startX;
-                const dy = e.touches[0].clientY - startY;
-                panX += dx;
-                panY += dy;
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                updateBoardTransform();
-            });
-
-            wrapper.addEventListener('touchend', () => { isDragging = false; });
-
-            wrapper.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-            });
-
-            wrapper.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                panX += dx;
-                panY += dy;
-                startX = e.clientX;
-                startY = e.clientY;
-                updateBoardTransform();
-            });
-
-            wrapper.addEventListener('mouseup', () => { isDragging = false; });
-            wrapper.addEventListener('mouseleave', () => { isDragging = false; });
-        }
-
-        // --- УВЕЛИЧЕНИЕ КАРТОЧКИ ---
-        function zoomTile(imgSrc) {
-            const modal = document.getElementById('zoom-modal');
-            const img = document.getElementById('zoom-img');
-            img.src = imgSrc;
-            modal.style.display = 'flex';
-        }
-
-        function closeZoom() {
-            document.getElementById('zoom-modal').style.display = 'none';
-        }
-
-        // --- ПРОПУСК ХОДА ---
-        function skipTurn() {
-            if (currentTileIndex === null) {
-                document.getElementById('status-text').innerText = "Сначала возьмите тайл!";
-                return;
-            }
-            let hasPlace = false;
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (carBoardData[r][c] === null && checkCarPlacement(r, c)) {
-                        hasPlace = true;
-                        break;
-                    }
-                }
-                if (hasPlace) break;
-            }
-
-            if (hasPlace) {
-                document.getElementById('status-text').innerText = "Есть места, куда можно поставить тайл!";
-                return;
-            }
-
-            document.getElementById('status-text').innerText = `Некуда ставить тайл. Ход переходит к ${currentPlayer === 'red' ? 'Красным' : 'Синим'}.`;
-            currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
-            currentTileIndex = null;
-            currentRotation = 0;
-            updateCarPreview();
-            startCarTimer();
-            updateCarUI();
-        }
-
-        // --- ПОСТАНОВКА ФИШКИ ---
-        function placeMeepleOnLastTile() {
-            if (lastPlacedR === -1 || lastPlacedC === -1) {
-                document.getElementById('status-text').innerText = "Сначала поставьте тайл, чтобы поставить на него фишку!";
-                return;
-            }
-            if (carBoardData[lastPlacedR][lastPlacedC].meeple) {
-                document.getElementById('status-text').innerText = "На этом тайле уже стоит фишка!";
-                return;
-            }
-            if (playerMeeples[currentPlayer] <= 0) {
-                document.getElementById('status-text').innerText = "У вас закончились фишки!";
-                return;
-            }
-
-            carBoardData[lastPlacedR][lastPlacedC].meeple = currentPlayer;
-            playerMeeples[currentPlayer]--;
+            const center = Math.floor(BOARD_SIZE / 2);
+            carBoardData[center][center] = { imgIndex: 1, rotation: 0, meeple: null };
             renderCarBoard();
-            updateCarUI();
-            document.getElementById('status-text').innerText = `Фишка поставлена! Осталось: ${playerMeeples[currentPlayer]}`;
-        }
-
-        function startCarTimer() {
-            carTimeLeft = 180;
-            updateCarTimerDisplay();
-            if (carTimer) clearInterval(carTimer);
-            carTimer = setInterval(() => {
-                carTimeLeft--;
-                updateCarTimerDisplay();
-                if (carTimeLeft <= 0) {
-                    clearInterval(carTimer);
-                    document.getElementById('status-text').innerText = "Время вышло! Ход переходит.";
-                    currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
-                    startCarTimer();
-                    updateCarUI();
-                }
-            }, 1000);
-        }
-
-        function updateCarTimerDisplay() {
-            const minutes = Math.floor(carTimeLeft / 60);
-            const seconds = carTimeLeft % 60;
-            document.getElementById('status-text').innerText = `Ход: ${currentPlayer === 'red' ? 'Синие' : 'Красные'} | Время: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function updateCarUI() {
-            document.getElementById('player1-meeples').innerText = playerMeeples.red;
-            document.getElementById('player2-meeples').innerText = playerMeeples.blue;
-            document.getElementById('player1-points').innerText = playerPoints.red;
-            document.getElementById('player2-points').innerText = playerPoints.blue;
             
-            document.getElementById('player1-panel').classList.remove('active-player');
-            document.getElementById('player2-panel').classList.remove('active-player');
-            if (currentPlayer === 'red') {
-                document.getElementById('player1-panel').classList.add('active-player');
-            } else {
-                document.getElementById('player2-panel').classList.add('active-player');
-            }
+            updatePlayerPanels();
+            startCarTimer();
+            document.getElementById('status-text').innerText = "Игра началась! Ход Синих.";
         }
 
         function drawTile() {
@@ -624,36 +326,59 @@
             }
             currentTileIndex = Math.floor(Math.random() * TOTAL_TILES) + 1;
             currentRotation = 0;
-            updateCarPreview();
+            isMeepleMode = false;
+            updatePreview();
+            document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}. Выберите клетку.`;
         }
 
         function rotateTile() {
             if (currentTileIndex === null) return;
             currentRotation = (currentRotation + 90) % 360;
-            updateCarPreview();
+            updatePreview();
         }
 
-        function updateCarPreview() {
-            const preview = document.getElementById('tile-preview');
+        function updatePreview() {
+            const previewElement = document.getElementById('tile-preview');
             if (currentTileIndex === null) {
-                preview.innerHTML = '';
+                previewElement.innerHTML = '';
                 return;
             }
             const img = document.createElement('img');
             img.src = `${TILE_FOLDER}tile_${currentTileIndex}${FILE_EXTENSION}`;
             img.style.transform = `rotate(${currentRotation}deg)`;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-            preview.innerHTML = '';
-            preview.appendChild(img);
+            previewElement.innerHTML = '';
+            previewElement.appendChild(img);
         }
 
         function onCarCellClick(r, c) {
+            if (isMeepleMode) {
+                if (carBoardData[r][c] !== null && carBoardData[r][c].meeple === null) {
+                    if (currentPlayer === 'blue' && blueMeeples > 0) {
+                        carBoardData[r][c].meeple = 'blue';
+                        blueMeeples--;
+                    } else if (currentPlayer === 'red' && redMeeples > 0) {
+                        carBoardData[r][c].meeple = 'red';
+                        redMeeples--;
+                    } else {
+                        document.getElementById('status-text').innerText = "У вас нет фишек!";
+                        return;
+                    }
+                    isMeepleMode = false;
+                    renderCarBoard();
+                    updatePlayerPanels();
+                    document.getElementById('status-text').innerText = "Фишка поставлена!";
+                    nextCarTurn();
+                } else {
+                    document.getElementById('status-text').innerText = "Сюда нельзя поставить фишку.";
+                }
+                return;
+            }
+
             if (currentTileIndex === null) {
                 document.getElementById('status-text').innerText = "Сначала возьмите тайл!";
                 return;
             }
+            
             if (carBoardData[r][c] !== null) {
                 document.getElementById('status-text').innerText = "Эта клетка уже занята!";
                 return;
@@ -667,9 +392,16 @@
                     return;
                 }
             } else {
-                const isValid = checkCarPlacement(r, c);
-                if (!isValid) {
-                    document.getElementById('status-text').innerText = "Сюда нельзя ставить тайл (не совпадают края)!";
+                let hasNeighbor = false;
+                const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+                for (let [dr, dc] of dirs) {
+                    let nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && carBoardData[nr][nc] !== null) {
+                        hasNeighbor = true;
+                    }
+                }
+                if (!hasNeighbor) {
+                    document.getElementById('status-text').innerText = "Тайл должен касаться другого тайла!";
                     return;
                 }
             }
@@ -680,61 +412,73 @@
                 meeple: null
             };
 
-            lastPlacedR = r;
-            lastPlacedC = c;
-
             renderCarBoard();
             currentTileIndex = null;
             currentRotation = 0;
-            updateCarPreview();
-            document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}. Можете поставить фишку.`;
-            currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
-            updateCarUI();
+            updatePreview();
+            
+            document.getElementById('status-text').innerText = `Тайл установлен!`;
+            nextCarTurn();
         }
 
-        function checkCarPlacement(r, c) {
-            const currentTile = TILE_DATA[currentTileIndex];
-            if (!currentTile) return false;
-            const rotatedSides = getRotatedSides(currentTile, currentRotation);
+        function placeMeeple() {
+            if (currentTileIndex !== null) {
+                document.getElementById('status-text').innerText = "Сначала поставьте тайл!";
+                return;
+            }
+            isMeepleMode = true;
+            document.getElementById('status-text').innerText = "Выберите тайл на поле, чтобы поставить фишку.";
+        }
 
-            let hasNeighbor = false;
-            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        function skipTurn() {
+            if (currentTileIndex !== null) {
+                document.getElementById('status-text').innerText = "Сначала поставьте тайл!";
+                return;
+            }
+            nextCarTurn();
+        }
 
-            for (let [dr, dc] of dirs) {
-                let nr = r + dr, nc = c + dc;
-                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-                if (carBoardData[nr][nc] === null) continue;
+        function nextCarTurn() {
+            currentPlayer = currentPlayer === 'blue' ? 'red' : 'blue';
+            updatePlayerPanels();
+            resetCarTimer();
+            document.getElementById('status-text').innerText = `Ход ${currentPlayer === 'blue' ? 'Синих' : 'Красных'}. Время пошло.`;
+        }
 
-                hasNeighbor = true;
-                const neighborData = carBoardData[nr][nc];
-                const neighborTile = TILE_DATA[neighborData.imgIndex];
-                if (!neighborTile) continue;
+        function updatePlayerPanels() {
+            document.getElementById('player1-meeples').innerText = blueMeeples;
+            document.getElementById('player2-meeples').innerText = redMeeples;
+            
+            const p1Panel = document.getElementById('player1-panel');
+            const p2Panel = document.getElementById('player2-panel');
+            
+            if (currentPlayer === 'blue') {
+                p1Panel.classList.add('active');
+                p2Panel.classList.remove('active');
+            } else {
+                p2Panel.classList.add('active');
+                p1Panel.classList.remove('active');
+            }
+        }
+
+        function startCarTimer() {
+            resetCarTimer();
+        }
+
+        function resetCarTimer() {
+            if (carTurnTimer) clearInterval(carTurnTimer);
+            carTimeLeft = CAR_TURN_TIME;
+            
+            carTurnTimer = setInterval(() => {
+                carTimeLeft--;
+                document.getElementById('status-text').innerText = `Ход: ${currentPlayer === 'blue' ? 'Синие' : 'Красные'} | Время: ${Math.floor(carTimeLeft / 60)}:${(carTimeLeft % 60).toString().padStart(2, '0')}`;
                 
-                const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
-
-                let currentSide, neighborSide;
-                if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
-                if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
-                if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
-                if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
-
-                if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
-                    return false;
+                if (carTimeLeft <= 0) {
+                    clearInterval(carTurnTimer);
+                    document.getElementById('status-text').innerText = "Время вышло! Ход переходит.";
+                    nextCarTurn();
                 }
-            }
-            return hasNeighbor;
-        }
-
-        function getRotatedSides(tile, rotation) {
-            let sides = { ...tile };
-            if (rotation === 90) {
-                sides = { top: tile.left, right: tile.top, bottom: tile.right, left: tile.bottom };
-            } else if (rotation === 180) {
-                sides = { top: tile.bottom, right: tile.left, bottom: tile.top, left: tile.right };
-            } else if (rotation === 270) {
-                sides = { top: tile.right, right: tile.bottom, bottom: tile.left, left: tile.top };
-            }
-            return sides;
+            }, 1000);
         }
 
         function renderCarBoard() {
@@ -749,12 +493,8 @@
                         img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
                         img.className = 'tile-img';
                         img.style.transform = `rotate(${tileData.rotation}deg)`;
-                        // Добавляем клик для увеличения
-                        img.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            zoomTile(img.src);
-                        });
                         cell.appendChild(img);
+                        
                         if (tileData.meeple) {
                             const meeple = document.createElement('div');
                             meeple.className = `meeple ${tileData.meeple}`;
@@ -771,15 +511,11 @@
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
-                
                 if (isOnlineMode) {
-                    if (myColor === 'white') {
-                        nameElement.classList.add('black-color');
-                    } else if (myColor === 'black') {
-                        nameElement.classList.add('white-color');
-                    }
+                    if (myColor === 'white') nameElement.classList.add('white-color');
+                    else if (myColor === 'black') nameElement.classList.add('black-color');
                 } else {
-                    nameElement.classList.add('white-color');
+                    nameElement.classList.add('black-color');
                 }
             }
             myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
