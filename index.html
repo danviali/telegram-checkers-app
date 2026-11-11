@@ -7,8 +7,9 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 15px; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 10px; overflow: hidden; }
         
+        /* --- МЕНЮ --- */
         #menu-screen { display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10; width: 100%; }
         .menu-btn { padding: 15px 30px; font-size: 18px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s; width: 250px; color: white; }
         .menu-btn:active { transform: scale(0.95); }
@@ -25,17 +26,19 @@
         .helper-toggle input:checked ~ .checkmark::after { opacity: 1; }
         .helper-label { font-size: 14px; font-weight: 600; color: #c9d1d9; }
 
+        /* --- ЭКРАН ОЖИДАНИЯ --- */
         #waiting-screen { display: none; flex-direction: column; align-items: center; gap: 20px; z-index: 10; width: 100%; text-align: center; }
         #waiting-screen h2 { font-size: 24px; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         #waiting-screen p { color: #6c7a89; font-size: 14px; word-break: break-word; padding: 0 20px; }
         .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #4facfe; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* --- ИГРА (ШАШКИ) --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } /* Синий */
+        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } /* Красный */
 
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
         #timer-display { display: none; position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; font-size: 14px; color: #f1c40f; font-weight: 700; z-index: 20; }
@@ -61,22 +64,45 @@
         .hint-piece { box-shadow: 0 0 15px #2ecc71, 0 0 25px #2ecc71 !important; border: 2px solid #2ecc71 !important; }
         .fade-out { opacity: 0; transform: scale(0); }
         
+        /* --- КАРКАССОН --- */
         #carcassonne-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
-        #carcassonne-board { display: grid; grid-template-columns: repeat(10, 32px); grid-template-rows: repeat(10, 32px); gap: 1px; background: #1e2633; padding: 5px; border-radius: 8px; margin-top: 10px; }
-        .car-cell { width: 32px; height: 32px; background: #131821; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
-        .car-cell.occupied { background: #2a3a4a; }
-        .tile { width: 100%; height: 100%; background-size: cover; background-position: center; }
-        .meeple { width: 12px; height: 12px; border-radius: 50%; position: absolute; bottom: 2px; right: 2px; border: 1px solid white; }
+        #carcassonne-board { 
+            display: grid; 
+            grid-template-columns: repeat(9, 40px); 
+            grid-template-rows: repeat(9, 40px); 
+            gap: 1px; 
+            background: #1e2633; 
+            padding: 5px; 
+            border-radius: 8px; 
+            margin-top: 10px;
+            position: relative;
+        }
+        .car-cell { 
+            width: 40px; height: 40px; 
+            background: #131821; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer;
+            position: relative;
+        }
+        .tile-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+        .meeple { width: 14px; height: 14px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px solid white; z-index: 10; }
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
-        #car-info-panel { margin-top: 10px; text-align: center; }
-        #current-tile-preview { width: 40px; height: 40px; background-size: cover; border: 2px solid #f1c40f; margin: 5px auto; }
-        .car-btn { padding: 10px 20px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .car-btn:active { transform: scale(0.95); }
+        
+        #controls { margin-top: 15px; text-align: center; }
+        #tile-preview { width: 60px; height: 60px; background: #1e2633; border: 2px solid #f1c40f; margin: 10px auto; display: flex; align-items: center; justify-content: center; }
+        #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn { padding: 12px 24px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin: 5px; font-size: 16px; }
+        .btn:active { transform: scale(0.95); }
+        .btn-green { background: #2ecc71; }
+        
+        #status-text { margin-top: 10px; font-size: 14px; color: #c9d1d9; min-height: 20px; }
     </style>
 </head>
 <body>
 
+    <!-- МЕНЮ -->
     <div id="menu-screen">
         <h1 style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 28px; margin-bottom: 20px;">Выбери сложность</h1>
         <button class="menu-btn btn-easy" onclick="startGame('easy')">🟢 Легко</button>
@@ -89,6 +115,7 @@
         </label>
     </div>
 
+    <!-- ОЖИДАНИЕ -->
     <div id="waiting-screen">
         <div class="spinner"></div>
         <h2 id="waiting-title">Подключение к игре...</h2>
@@ -96,6 +123,7 @@
         <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
     </div>
 
+    <!-- ШАШКИ -->
     <div id="game-screen">
         <div class="header">
             <h1 id="player-name">Шашки Арена 🏆</h1>
@@ -107,18 +135,24 @@
         </div>
     </div>
 
+    <!-- КАРКАССОН -->
     <div id="carcassonne-screen">
-        <h2>🏰 Каркассон</h2>
-        <div id="car-info-panel">
-            <div>Текущий тайл:</div>
-            <div id="current-tile-preview"></div>
-            <button class="car-btn" onclick="drawNewTile()">Взять тайл</button>
-            <div id="car-status-text" style="margin-top: 5px; font-size: 14px;">Нажми "Взять тайл", чтобы начать</div>
+        <h2 style="color: #f1c40f;">🏰 Каркассон</h2>
+        
+        <div id="tile-preview"></div>
+        
+        <div id="controls">
+            <button class="btn" onclick="drawTile()">Взять тайл</button>
+            <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
+            <button class="btn" onclick="placeMeeple()" style="background: #e67e22;">Поставить фишку</button>
         </div>
+        
+        <div id="status-text">Нажми "Взять тайл"</div>
+        
         <div id="carcassonne-board"></div>
-        <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
     </div>
 
+    <!-- КОНЕЦ ИГРЫ -->
     <div id="game-over-screen">
         <div id="game-over-text">Победа!</div>
         <button class="end-btn primary" onclick="goToMenu()">🏠 Вернуться в меню</button>
@@ -162,6 +196,7 @@
         let board = []; 
         let isGameOver = false;
         let cellsDOM = []; 
+        
         let turnTimer = null;
         const TURN_TIME = 180; 
         let timeLeft = TURN_TIME;
@@ -170,9 +205,14 @@
         // ==========================================
         // КАРКАССОН
         // ==========================================
-        const CAR_SIZE = 10;
+        const BOARD_SIZE = 9;
+        const TILE_FOLDER = ""; 
+        const TOTAL_TILES = 108;
+        const FILE_EXTENSION = ".jpg";
+
         let carBoardData = [];
-        let currentTile = null;
+        let currentTileIndex = null;
+        let currentRotation = 0;
         let currentPlayer = 'red';
 
         function initCarcassonne() {
@@ -184,10 +224,10 @@
 
             const boardEl = document.getElementById('carcassonne-board');
             boardEl.innerHTML = '';
-            carBoardData = Array(CAR_SIZE).fill(null).map(() => Array(CAR_SIZE).fill(null));
+            carBoardData = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 
-            for (let r = 0; r < CAR_SIZE; r++) {
-                for (let c = 0; c < CAR_SIZE; c++) {
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
                     const cell = document.createElement('div');
                     cell.className = 'car-cell';
                     cell.dataset.row = r;
@@ -196,54 +236,113 @@
                     boardEl.appendChild(cell);
                 }
             }
+            document.getElementById('status-text').innerText = "Нажми 'Взять тайл', чтобы начать";
         }
 
-        function drawNewTile() {
-            if (currentTile) {
-                document.getElementById('car-status-text').innerText = "Сначала поставьте текущий тайл!";
+        function drawTile() {
+            if (currentTileIndex !== null) {
+                document.getElementById('status-text').innerText = "Сначала поставьте текущий тайл!";
                 return;
             }
-            const tileTypes = [
-                { id: 1, name: 'Дорога', color: '#556b2f' },
-                { id: 2, name: 'Город', color: '#cd853f' },
-                { id: 3, name: 'Монастырь', color: '#8b4513' },
-                { id: 4, name: 'Поле', color: '#228b22' }
-            ];
-            const randomIndex = Math.floor(Math.random() * tileTypes.length);
-            currentTile = tileTypes[randomIndex];
-            document.getElementById('current-tile-preview').style.background = currentTile.color;
-            document.getElementById('car-status-text').innerText = `Вытянут тайл: ${currentTile.name}. Выберите клетку.`;
+            currentTileIndex = Math.floor(Math.random() * TOTAL_TILES) + 1;
+            currentRotation = 0;
+            updateCarPreview();
+            document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}. Нажмите на клетку поля.`;
+        }
+
+        function rotateTile() {
+            if (currentTileIndex === null) return;
+            currentRotation = (currentRotation + 90) % 360;
+            updateCarPreview();
+        }
+
+        function updateCarPreview() {
+            const preview = document.getElementById('tile-preview');
+            if (currentTileIndex === null) {
+                preview.innerHTML = '';
+                return;
+            }
+            const img = document.createElement('img');
+            img.src = `${TILE_FOLDER}tile_${currentTileIndex}${FILE_EXTENSION}`;
+            img.style.transform = `rotate(${currentRotation}deg)`;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            preview.innerHTML = '';
+            preview.appendChild(img);
         }
 
         function onCarCellClick(r, c) {
-            if (!currentTile) {
-                document.getElementById('car-status-text').innerText = "Сначала возьмите тайл!";
+            if (currentTileIndex === null) {
+                document.getElementById('status-text').innerText = "Сначала возьмите тайл!";
                 return;
             }
             if (carBoardData[r][c] !== null) {
-                document.getElementById('car-status-text').innerText = "Клетка занята!";
+                document.getElementById('status-text').innerText = "Эта клетка уже занята!";
                 return;
             }
 
-            carBoardData[r][c] = currentTile;
-            const cell = document.querySelector(`#carcassonne-board .car-cell[data-row="${r}"][data-col="${c}"]`);
-            cell.classList.add('occupied');
-            
-            const tileDiv = document.createElement('div');
-            tileDiv.className = 'tile';
-            tileDiv.style.background = currentTile.color;
-            cell.appendChild(tileDiv);
-
-            if (confirm("Поставить фишку?")) {
-                const meeple = document.createElement('div');
-                meeple.className = `meeple ${currentPlayer}`;
-                cell.appendChild(meeple);
+            const isFirstMove = carBoardData.flat().every(cell => cell === null);
+            if (isFirstMove) {
+                const center = Math.floor(BOARD_SIZE / 2);
+                if (r !== center || c !== center) {
+                    document.getElementById('status-text').innerText = "Первый тайл должен быть в центре!";
+                    return;
+                }
+            } else {
+                let hasNeighbor = false;
+                const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+                for (let [dr, dc] of dirs) {
+                    let nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && carBoardData[nr][nc] !== null) {
+                        hasNeighbor = true;
+                    }
+                }
+                if (!hasNeighbor) {
+                    document.getElementById('status-text').innerText = "Тайл должен касаться другого тайла!";
+                    return;
+                }
             }
 
-            currentTile = null;
-            document.getElementById('current-tile-preview').style.background = 'transparent';
-            document.getElementById('car-status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}`;
+            carBoardData[r][c] = {
+                imgIndex: currentTileIndex,
+                rotation: currentRotation,
+                meeple: null
+            };
+
+            renderCarBoard();
+            currentTileIndex = null;
+            currentRotation = 0;
+            updateCarPreview();
+            document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}.`;
             currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
+        }
+
+        function placeMeeple() {
+            document.getElementById('status-text').innerText = "Выберите тайл, чтобы поставить фишку (в разработке).";
+        }
+
+        function renderCarBoard() {
+            const boardEl = document.getElementById('carcassonne-board');
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const cell = boardEl.querySelector(`.car-cell[data-row="${r}"][data-col="${c}"]`);
+                    cell.innerHTML = '';
+                    if (carBoardData[r][c] !== null) {
+                        const tileData = carBoardData[r][c];
+                        const img = document.createElement('img');
+                        img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
+                        img.className = 'tile-img';
+                        img.style.transform = `rotate(${tileData.rotation}deg)`;
+                        cell.appendChild(img);
+                        if (tileData.meeple) {
+                            const meeple = document.createElement('div');
+                            meeple.className = `meeple ${tileData.meeple}`;
+                            cell.appendChild(meeple);
+                        }
+                    }
+                }
+            }
         }
 
         // ==========================================
