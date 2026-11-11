@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Шашки Онлайн</title>
+    <title>Шашки и Каркассон</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -34,14 +34,10 @@
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
-        
-        /* Цвета имени */
-        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } /* Синий */
-        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } /* Красный */
+        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
-        
-        /* Таймер (показываем только в онлайне) */
         #timer-display { display: none; position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; font-size: 14px; color: #f1c40f; font-weight: 700; z-index: 20; }
 
         #game-over-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 14, 20, 0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
@@ -64,6 +60,19 @@
         .selected { border: 3px solid #ffffff !important; box-shadow: 0 0 10px #ffffff !important; transform: scale(1.1); z-index: 10;}
         .hint-piece { box-shadow: 0 0 15px #2ecc71, 0 0 25px #2ecc71 !important; border: 2px solid #2ecc71 !important; }
         .fade-out { opacity: 0; transform: scale(0); }
+        
+        #carcassonne-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
+        #carcassonne-board { display: grid; grid-template-columns: repeat(10, 32px); grid-template-rows: repeat(10, 32px); gap: 1px; background: #1e2633; padding: 5px; border-radius: 8px; margin-top: 10px; }
+        .car-cell { width: 32px; height: 32px; background: #131821; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .car-cell.occupied { background: #2a3a4a; }
+        .tile { width: 100%; height: 100%; background-size: cover; background-position: center; }
+        .meeple { width: 12px; height: 12px; border-radius: 50%; position: absolute; bottom: 2px; right: 2px; border: 1px solid white; }
+        .meeple.red { background: #ff007f; }
+        .meeple.blue { background: #00f2fe; }
+        #car-info-panel { margin-top: 10px; text-align: center; }
+        #current-tile-preview { width: 40px; height: 40px; background-size: cover; border: 2px solid #f1c40f; margin: 5px auto; }
+        .car-btn { padding: 10px 20px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .car-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -98,6 +107,18 @@
         </div>
     </div>
 
+    <div id="carcassonne-screen">
+        <h2>🏰 Каркассон</h2>
+        <div id="car-info-panel">
+            <div>Текущий тайл:</div>
+            <div id="current-tile-preview"></div>
+            <button class="car-btn" onclick="drawNewTile()">Взять тайл</button>
+            <div id="car-status-text" style="margin-top: 5px; font-size: 14px;">Нажми "Взять тайл", чтобы начать</div>
+        </div>
+        <div id="carcassonne-board"></div>
+        <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
+    </div>
+
     <div id="game-over-screen">
         <div id="game-over-text">Победа!</div>
         <button class="end-btn primary" onclick="goToMenu()">🏠 Вернуться в меню</button>
@@ -110,6 +131,7 @@
         const SERVER_URL = "https://similarly-discount-viability.ngrok-free.dev";
         
         const urlParams = new URLSearchParams(window.location.search);
+        const gameType = urlParams.get('game');
         const gameMode = urlParams.get('mode');
         const roomId = urlParams.get('room');
         const myColor = urlParams.get('color');
@@ -140,79 +162,159 @@
         let board = []; 
         let isGameOver = false;
         let cellsDOM = []; 
-        
         let turnTimer = null;
         const TURN_TIME = 180; 
         let timeLeft = TURN_TIME;
         let isAnimating = false;
 
-        // Установка имени и цвета
+        // ==========================================
+        // КАРКАССОН
+        // ==========================================
+        const CAR_SIZE = 10;
+        let carBoardData = [];
+        let currentTile = null;
+        let currentPlayer = 'red';
+
+        function initCarcassonne() {
+            document.getElementById('carcassonne-screen').style.display = 'flex';
+            menuScreen.style.display = 'none';
+            waitingScreen.style.display = 'none';
+            gameScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            const boardEl = document.getElementById('carcassonne-board');
+            boardEl.innerHTML = '';
+            carBoardData = Array(CAR_SIZE).fill(null).map(() => Array(CAR_SIZE).fill(null));
+
+            for (let r = 0; r < CAR_SIZE; r++) {
+                for (let c = 0; c < CAR_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'car-cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    cell.addEventListener('click', () => onCarCellClick(r, c));
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function drawNewTile() {
+            if (currentTile) {
+                document.getElementById('car-status-text').innerText = "Сначала поставьте текущий тайл!";
+                return;
+            }
+            const tileTypes = [
+                { id: 1, name: 'Дорога', color: '#556b2f' },
+                { id: 2, name: 'Город', color: '#cd853f' },
+                { id: 3, name: 'Монастырь', color: '#8b4513' },
+                { id: 4, name: 'Поле', color: '#228b22' }
+            ];
+            const randomIndex = Math.floor(Math.random() * tileTypes.length);
+            currentTile = tileTypes[randomIndex];
+            document.getElementById('current-tile-preview').style.background = currentTile.color;
+            document.getElementById('car-status-text').innerText = `Вытянут тайл: ${currentTile.name}. Выберите клетку.`;
+        }
+
+        function onCarCellClick(r, c) {
+            if (!currentTile) {
+                document.getElementById('car-status-text').innerText = "Сначала возьмите тайл!";
+                return;
+            }
+            if (carBoardData[r][c] !== null) {
+                document.getElementById('car-status-text').innerText = "Клетка занята!";
+                return;
+            }
+
+            carBoardData[r][c] = currentTile;
+            const cell = document.querySelector(`#carcassonne-board .car-cell[data-row="${r}"][data-col="${c}"]`);
+            cell.classList.add('occupied');
+            
+            const tileDiv = document.createElement('div');
+            tileDiv.className = 'tile';
+            tileDiv.style.background = currentTile.color;
+            cell.appendChild(tileDiv);
+
+            if (confirm("Поставить фишку?")) {
+                const meeple = document.createElement('div');
+                meeple.className = `meeple ${currentPlayer}`;
+                cell.appendChild(meeple);
+            }
+
+            currentTile = null;
+            document.getElementById('current-tile-preview').style.background = 'transparent';
+            document.getElementById('car-status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'red' ? 'Синих' : 'Красных'}`;
+            currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
+        }
+
+        // ==========================================
+        // ЛОГИКА ШАШЕК
+        // ==========================================
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
-                
                 if (isOnlineMode) {
-                    // В онлайне цвет имени зависит от роли (white = синий, black = красный)
                     if (myColor === 'white') nameElement.classList.add('white-color');
                     else if (myColor === 'black') nameElement.classList.add('black-color');
                 } else {
-                    // В игре с ботом игрок всегда за красных (по логике кода)
                     nameElement.classList.add('black-color');
                 }
             }
             myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
         } catch (e) { myPlayerId = 111; }
 
-        if (isOnlineMode) {
-            menuScreen.style.display = 'none';
-            waitingScreen.style.display = 'flex';
-            timerDisplay.style.display = 'block'; // Показываем таймер только в онлайне
-            
-            async function fetchState() {
-                if (isGameOver || isSendingMove) return;
-                
-                try {
-                    const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
-                        headers: { "ngrok-skip-browser-warning": "true" }
-                    });
-                    if (!res.ok) { waitingTitle.innerText = "Ошибка " + res.status; return; }
-                    const data = await res.json();
-                    if (data.error) { waitingTitle.innerText = "Ошибка данных"; return; }
-                    
-                    onlineBoard = data.board;
-                    onlineTurn = data.turn;
-                    isPlayerTurn = (onlineTurn === 'white' && myColor === 'white') || (onlineTurn === 'black' && myColor === 'black');
-
-                    if (waitingScreen.style.display !== 'none') {
-                        waitingScreen.style.display = 'none';
-                        gameScreen.style.display = 'flex';
-                        initOnlineBoard();
-                    } else {
-                        if (!isAnimating) updateOnlineBoard(); 
-                    }
-                    statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
-                    
-                    if (data.winner && !isGameOver) {
-                        isGameOver = true;
-                        if (data.winner === myColor) showGameOver("Ты победил! 🏆", true);
-                        else showGameOver("Ты проиграл! 🤖", false);
-                        return;
-                    }
-
-                    if (isPlayerTurn && !turnTimer) startTimer();
-                    else if (!isPlayerTurn && turnTimer) {
-                        clearInterval(turnTimer); turnTimer = null; timerDisplay.innerText = "00:00";
-                    }
-                } catch (e) {
-                    console.error(e);
-                    waitingTitle.innerText = "Ошибка сети!";
-                }
-            }
-            fetchState();
-            setInterval(fetchState, 1000);
+        if (gameType === 'carcassonne') {
+            initCarcassonne();
         } else {
-            menuScreen.style.display = 'flex';
-            timerDisplay.style.display = 'none'; // Скрываем таймер в игре с ботом
+            if (isOnlineMode) {
+                menuScreen.style.display = 'none';
+                waitingScreen.style.display = 'flex';
+                timerDisplay.style.display = 'block';
+                
+                async function fetchState() {
+                    if (isGameOver || isSendingMove) return;
+                    try {
+                        const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
+                            headers: { "ngrok-skip-browser-warning": "true" }
+                        });
+                        if (!res.ok) { waitingTitle.innerText = "Ошибка " + res.status; return; }
+                        const data = await res.json();
+                        if (data.error) { waitingTitle.innerText = "Ошибка данных"; return; }
+                        
+                        onlineBoard = data.board;
+                        onlineTurn = data.turn;
+                        isPlayerTurn = (onlineTurn === 'white' && myColor === 'white') || (onlineTurn === 'black' && myColor === 'black');
+
+                        if (waitingScreen.style.display !== 'none') {
+                            waitingScreen.style.display = 'none';
+                            gameScreen.style.display = 'flex';
+                            initOnlineBoard();
+                        } else {
+                            if (!isAnimating) updateOnlineBoard(); 
+                        }
+                        statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
+                        
+                        if (data.winner && !isGameOver) {
+                            isGameOver = true;
+                            if (data.winner === myColor) showGameOver("Ты победил! 🏆", true);
+                            else showGameOver("Ты проиграл! 🤖", false);
+                            return;
+                        }
+
+                        if (isPlayerTurn && !turnTimer) startTimer();
+                        else if (!isPlayerTurn && turnTimer) {
+                            clearInterval(turnTimer); turnTimer = null; timerDisplay.innerText = "00:00";
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        waitingTitle.innerText = "Ошибка сети!";
+                    }
+                }
+                fetchState();
+                setInterval(fetchState, 1000);
+            } else {
+                menuScreen.style.display = 'flex';
+                timerDisplay.style.display = 'none';
+            }
         }
 
         function startTimer() {
