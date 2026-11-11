@@ -37,8 +37,8 @@
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } /* Синий */
-        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; } /* Красный */
+        .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         #status { font-size: 13px; color: #6c7a89; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; }
         #timer-display { display: none; position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; font-size: 14px; color: #f1c40f; font-weight: 700; z-index: 20; }
@@ -138,18 +138,14 @@
     <!-- КАРКАССОН -->
     <div id="carcassonne-screen">
         <h2 style="color: #f1c40f;">🏰 Каркассон</h2>
-        
         <div id="tile-preview"></div>
-        
         <div id="controls">
             <button class="btn" onclick="drawTile()">Взять тайл</button>
             <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
-            <button class="btn" onclick="placeMeeple()" style="background: #e67e22;">Поставить фишку</button>
         </div>
-        
         <div id="status-text">Нажми "Взять тайл"</div>
-        
         <div id="carcassonne-board"></div>
+        <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
     </div>
 
     <!-- КОНЕЦ ИГРЫ -->
@@ -203,12 +199,123 @@
         let isAnimating = false;
 
         // ==========================================
-        // КАРКАССОН
+        // БАЗА ДАННЫХ ВСЕХ 108 ТАЙЛОВ (КАРКАССОН)
         // ==========================================
+        const TILE_DATA = {
+            1: { top: "F", right: "F", bottom: "C", left: "C" },
+            2: { top: "F", right: "F", bottom: "C", left: "C" },
+            3: { top: "F", right: "F", bottom: "C", left: "C" },
+            4: { top: "C", right: "R", bottom: "F", left: "F" },
+            5: { top: "F", right: "F", bottom: "R", left: "C" },
+            6: { top: "C", right: "F", bottom: "R", left: "F" },
+            7: { top: "F", right: "F", bottom: "R", left: "C" },
+            8: { top: "F", right: "R", bottom: "R", left: "R" },
+            9: { top: "F", right: "R", bottom: "R", left: "R" },
+            10: { top: "F", right: "R", bottom: "R", left: "R" },
+            11: { top: "F", right: "R", bottom: "F", left: "F" },
+            12: { top: "F", right: "F", bottom: "C", left: "C" },
+            13: { top: "F", right: "F", bottom: "C", left: "C" },
+            14: { top: "F", right: "F", bottom: "C", left: "C" },
+            15: { top: "C", right: "R", bottom: "F", left: "F" },
+            16: { top: "C", right: "F", bottom: "R", left: "F" },
+            17: { top: "F", right: "F", bottom: "R", left: "C" },
+            18: { top: "F", right: "R", bottom: "R", left: "F" },
+            19: { top: "M", right: "F", bottom: "F", left: "F" },
+            20: { top: "C", right: "F", bottom: "F", left: "F" },
+            21: { top: "C", right: "C", bottom: "C", left: "C" },
+            22: { top: "F", right: "F", bottom: "C", left: "C" },
+            23: { top: "C", right: "F", bottom: "F", left: "F" },
+            24: { top: "F", right: "W", bottom: "C", left: "F" },
+            25: { top: "F", right: "F", bottom: "C", left: "C" },
+            26: { top: "F", right: "C", bottom: "C", left: "C" },
+            27: { top: "F", right: "F", bottom: "W", left: "W" },
+            28: { top: "F", right: "W", bottom: "W", left: "F" },
+            29: { top: "F", right: "W", bottom: "F", left: "W" },
+            30: { top: "F", right: "F", bottom: "W", left: "W" },
+            31: { top: "M", right: "F", bottom: "F", left: "F" },
+            32: { top: "C", right: "R", bottom: "F", left: "F" },
+            33: { top: "F", right: "F", bottom: "R", left: "C" },
+            34: { top: "W", right: "R", bottom: "W", left: "R" },
+            35: { top: "F", right: "R", bottom: "W", left: "W" },
+            36: { top: "W", right: "F", bottom: "F", left: "W" },
+            37: { top: "F", right: "W", bottom: "F", left: "W" },
+            38: { top: "F", right: "F", bottom: "R", left: "W" },
+            39: { top: "C", right: "F", bottom: "F", left: "F" },
+            40: { top: "F", right: "C", bottom: "F", left: "C" },
+            41: { top: "C", right: "C", bottom: "C", left: "C" },
+            42: { top: "F", right: "W", bottom: "F", left: "W" },
+            43: { top: "F", right: "W", bottom: "W", left: "F" },
+            44: { top: "F", right: "F", bottom: "W", left: "W" },
+            45: { top: "F", right: "W", bottom: "W", left: "F" },
+            46: { top: "F", right: "W", bottom: "F", left: "W" },
+            47: { top: "F", right: "F", bottom: "F", left: "F" },
+            48: { top: "F", right: "F", bottom: "F", left: "F" },
+            49: { top: "C", right: "R", bottom: "F", left: "F" },
+            50: { top: "F", right: "R", bottom: "C", left: "F" },
+            51: { top: "C", right: "F", bottom: "W", left: "R" },
+            52: { top: "R", right: "R", bottom: "W", left: "F" },
+            53: { top: "R", right: "R", bottom: "R", left: "R" },
+            54: { top: "C", right: "C", bottom: "R", left: "F" },
+            55: { top: "R", right: "F", bottom: "F", left: "R" },
+            56: { top: "C", right: "C", bottom: "F", left: "R" },
+            57: { top: "F", right: "R", bottom: "F", left: "C" },
+            58: { top: "F", right: "R", bottom: "R", left: "F" },
+            59: { top: "R", right: "R", bottom: "R", left: "F" },
+            60: { top: "W", right: "C", bottom: "W", left: "R" },
+            61: { top: "W", right: "C", bottom: "W", left: "C" },
+            62: { top: "R", right: "R", bottom: "F", left: "C" },
+            63: { top: "R", right: "R", bottom: "R", left: "F" },
+            64: { top: "W", right: "F", bottom: "W", left: "F" },
+            65: { top: "W", right: "F", bottom: "W", left: "F" },
+            66: { top: "R", right: "R", bottom: "F", left: "R" },
+            67: { top: "R", right: "R", bottom: "R", left: "F" },
+            68: { top: "W", right: "R", bottom: "W", left: "W" },
+            69: { top: "W", right: "W", bottom: "W", left: "W" },
+            70: { top: "F", right: "W", bottom: "F", left: "W" },
+            71: { top: "F", right: "F", bottom: "W", left: "F" },
+            72: { top: "F", right: "R", bottom: "R", left: "R" },
+            73: { top: "W", right: "F", bottom: "W", left: "R" },
+            74: { top: "F", right: "C", bottom: "F", left: "W" },
+            75: { top: "R", right: "C", bottom: "F", left: "R" },
+            76: { top: "C", right: "F", bottom: "F", left: "R" },
+            77: { top: "F", right: "R", bottom: "F", left: "F" },
+            78: { top: "F", right: "C", bottom: "F", left: "R" },
+            79: { top: "C", right: "R", bottom: "C", left: "C" },
+            80: { top: "F", right: "R", bottom: "F", left: "C" },
+            81: { top: "F", right: "R", bottom: "F", left: "F" },
+            82: { top: "C", right: "C", bottom: "C", left: "C" },
+            83: { top: "F", right: "R", bottom: "F", left: "C" },
+            84: { top: "R", right: "C", bottom: "F", left: "F" },
+            85: { top: "C", right: "F", bottom: "C", left: "C" },
+            86: { top: "R", right: "R", bottom: "R", left: "R" },
+            87: { top: "F", right: "F", bottom: "R", left: "F" },
+            88: { top: "F", right: "C", bottom: "F", left: "F" },
+            89: { top: "F", right: "C", bottom: "F", left: "F" },
+            90: { top: "F", right: "C", bottom: "C", left: "C" },
+            91: { top: "C", right: "F", bottom: "F", left: "C" },
+            92: { top: "C", right: "C", bottom: "C", left: "C" },
+            93: { top: "C", right: "C", bottom: "C", left: "C" },
+            94: { top: "F", right: "C", bottom: "F", left: "C" },
+            95: { top: "C", right: "F", bottom: "F", left: "F" },
+            96: { top: "F", right: "C", bottom: "F", left: "C" },
+            97: { top: "F", right: "C", bottom: "F", left: "F" },
+            98: { top: "F", right: "F", bottom: "R", left: "F" },
+            99: { top: "F", right: "R", bottom: "F", left: "R" },
+            100: { top: "C", right: "F", bottom: "C", left: "C" },
+            101: { top: "F", right: "C", bottom: "C", left: "F" },
+            102: { top: "R", right: "F", bottom: "R", left: "C" },
+            103: { top: "C", right: "C", bottom: "F", left: "C" },
+            104: { top: "R", right: "F", bottom: "F", left: "F" },
+            105: { top: "F", right: "R", bottom: "F", left: "R" },
+            106: { top: "R", right: "R", bottom: "R", left: "R" },
+            107: { top: "C", right: "R", bottom: "R", left: "F" },
+            108: { top: "R", right: "F", bottom: "R", left: "F" }
+        };
+
         const BOARD_SIZE = 9;
         const TILE_FOLDER = ""; 
         const TOTAL_TILES = 108;
-        const FILE_EXTENSION = ".jpg";
+        const FILE_EXTENSION = ".jpg"; 
 
         let carBoardData = [];
         let currentTileIndex = null;
@@ -290,16 +397,9 @@
                     return;
                 }
             } else {
-                let hasNeighbor = false;
-                const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
-                for (let [dr, dc] of dirs) {
-                    let nr = r + dr, nc = c + dc;
-                    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && carBoardData[nr][nc] !== null) {
-                        hasNeighbor = true;
-                    }
-                }
-                if (!hasNeighbor) {
-                    document.getElementById('status-text').innerText = "Тайл должен касаться другого тайла!";
+                const isValid = checkCarPlacement(r, c);
+                if (!isValid) {
+                    document.getElementById('status-text').innerText = "Сюда нельзя ставить тайл (не совпадают края)!";
                     return;
                 }
             }
@@ -318,8 +418,49 @@
             currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
         }
 
-        function placeMeeple() {
-            document.getElementById('status-text').innerText = "Выберите тайл, чтобы поставить фишку (в разработке).";
+        function checkCarPlacement(r, c) {
+            const currentTile = TILE_DATA[currentTileIndex];
+            if (!currentTile) return false;
+            const rotatedSides = getRotatedSides(currentTile, currentRotation);
+
+            let hasNeighbor = false;
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+            for (let [dr, dc] of dirs) {
+                let nr = r + dr, nc = c + dc;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                if (carBoardData[nr][nc] === null) continue;
+
+                hasNeighbor = true;
+                const neighborData = carBoardData[nr][nc];
+                const neighborTile = TILE_DATA[neighborData.imgIndex];
+                if (!neighborTile) continue;
+                
+                const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
+
+                let currentSide, neighborSide;
+                if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
+                if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
+                if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
+                if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
+
+                if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
+                    return false;
+                }
+            }
+            return hasNeighbor;
+        }
+
+        function getRotatedSides(tile, rotation) {
+            let sides = { ...tile };
+            if (rotation === 90) {
+                sides = { top: tile.left, right: tile.top, bottom: tile.right, left: tile.bottom };
+            } else if (rotation === 180) {
+                sides = { top: tile.bottom, right: tile.left, bottom: tile.top, left: tile.right };
+            } else if (rotation === 270) {
+                sides = { top: tile.right, right: tile.bottom, bottom: tile.left, left: tile.top };
+            }
+            return sides;
         }
 
         function renderCarBoard() {
