@@ -119,8 +119,39 @@
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
         
+        /* Модальное окно для увеличения карточки */
+        #zoom-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #zoom-modal img {
+            max-width: 90%;
+            max-height: 80%;
+            border: 3px solid #f1c40f;
+            border-radius: 12px;
+        }
+        #zoom-modal button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #ff4b2b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
         #controls { margin-top: 15px; text-align: center; }
-        #tile-preview { width: 60px; height: 60px; background: #1e2633; border: 2px solid #f1c40f; margin: 10px auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+        #tile-preview { width: 60px; height: 60px; background: #1e2633; border: 2px solid #f1c40f; margin: 10px auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; }
         #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
         
         .btn { padding: 12px 24px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin: 5px; font-size: 16px; }
@@ -172,8 +203,8 @@
             <div class="player-info">
                 <span class="player-name red">Игрок 1 (Синие)</span>
             </div>
-            <div class="player-meeples" id="player1-meeples">Фишек: 7</div>
-            <div class="player-meeples" id="player1-points">Очки: 0</div>
+            <div class="player-meeples" id="player1-meeples">7</div>
+            <div class="player-meeples" id="player1-points">0</div>
         </div>
 
         <div id="tile-preview"></div>
@@ -200,11 +231,17 @@
             <div class="player-info">
                 <span class="player-name blue">Игрок 2 (Красные)</span>
             </div>
-            <div class="player-meeples" id="player2-meeples">Фишек: 7</div>
-            <div class="player-meeples" id="player2-points">Очки: 0</div>
+            <div class="player-meeples" id="player2-meeples">7</div>
+            <div class="player-meeples" id="player2-points">0</div>
         </div>
 
         <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ УВЕЛИЧЕНИЯ -->
+    <div id="zoom-modal" onclick="closeZoom()">
+        <img id="zoom-img" src="">
+        <button>Закрыть</button>
     </div>
 
     <!-- КОНЕЦ ИГРЫ -->
@@ -258,7 +295,7 @@
         let isAnimating = false;
 
         // ==========================================
-        // БАЗА ДАННЫХ ВСЕХ 108 ТАЙЛОВ (ИСПРАВЛЕННАЯ)
+        // БАЗА ДАННЫХ ВСЕХ 108 ТАЙЛОВ
         // ==========================================
         const TILE_DATA = {
             1: { left: "R", top: "F", right: "R", bottom: "F" },
@@ -371,7 +408,7 @@
             108: { left: "R", top: "C", right: "R", bottom: "F" }
         };
 
-        const BOARD_SIZE = 9;
+        const BOARD_SIZE = 12;
         const TILE_FOLDER = ""; 
         const TOTAL_TILES = 108;
         const FILE_EXTENSION = ".jpg"; 
@@ -424,7 +461,7 @@
         function changeZoom(delta) {
             currentZoom += delta;
             if (currentZoom < 0.5) currentZoom = 0.5;
-            if (currentZoom > 3) currentZoom = 3;
+            if (currentZoom > 5) currentZoom = 5;
             updateBoardTransform();
         }
 
@@ -475,6 +512,18 @@
 
             wrapper.addEventListener('mouseup', () => { isDragging = false; });
             wrapper.addEventListener('mouseleave', () => { isDragging = false; });
+        }
+
+        // --- УВЕЛИЧЕНИЕ КАРТОЧКИ ---
+        function zoomTile(imgSrc) {
+            const modal = document.getElementById('zoom-modal');
+            const img = document.getElementById('zoom-img');
+            img.src = imgSrc;
+            modal.style.display = 'flex';
+        }
+
+        function closeZoom() {
+            document.getElementById('zoom-modal').style.display = 'none';
         }
 
         // --- ПРОПУСК ХОДА ---
@@ -554,10 +603,10 @@
         }
 
         function updateCarUI() {
-            document.getElementById('player1-meeples').innerText = `Фишек: ${playerMeeples.red}`;
-            document.getElementById('player2-meeples').innerText = `Фишек: ${playerMeeples.blue}`;
-            document.getElementById('player1-points').innerText = `Очки: ${playerPoints.red}`;
-            document.getElementById('player2-points').innerText = `Очки: ${playerPoints.blue}`;
+            document.getElementById('player1-meeples').innerText = playerMeeples.red;
+            document.getElementById('player2-meeples').innerText = playerMeeples.blue;
+            document.getElementById('player1-points').innerText = playerPoints.red;
+            document.getElementById('player2-points').innerText = playerPoints.blue;
             
             document.getElementById('player1-panel').classList.remove('active-player');
             document.getElementById('player2-panel').classList.remove('active-player');
@@ -700,6 +749,11 @@
                         img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
                         img.className = 'tile-img';
                         img.style.transform = `rotate(${tileData.rotation}deg)`;
+                        // Добавляем клик для увеличения
+                        img.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            zoomTile(img.src);
+                        });
                         cell.appendChild(img);
                         if (tileData.meeple) {
                             const meeple = document.createElement('div');
