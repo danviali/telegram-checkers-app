@@ -80,7 +80,6 @@
             border: 2px solid transparent;
             font-size: 16px;
             font-weight: bold;
-            transition: border-color 0.3s, box-shadow 0.3s;
         }
         .player-panel.active { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
         
@@ -98,18 +97,17 @@
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.3s;
         }
         #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
         
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: transform 0.1s, background 0.2s; }
+        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
         .btn:active { transform: scale(0.95); }
         .btn-green { background: #2ecc71; }
         .btn-orange { background: #e67e22; }
         .btn-purple { background: #9b59b6; }
         
-        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; min-height: 24px; }
+        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; }
         
         #board-wrapper {
             width: 100%;
@@ -148,86 +146,73 @@
         
         .car-cell.highlight { background: rgba(46, 204, 113, 0.3); border: 1px solid #2ecc71; }
         
-        /* Анимация появления тайла */
-        .tile-img { 
-            width: 100%; height: 100%; object-fit: cover; 
-            animation: tileAppear 0.3s ease-out;
-        }
-        @keyframes tileAppear {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-        }
+        .tile-img { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Анимация появления фишки */
         .meeple { 
             width: 16px; height: 16px; 
             border-radius: 50%; 
             position: absolute; 
             border: 2px solid white;
             z-index: 10;
-            animation: meepleAppear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes meepleAppear {
-            from { opacity: 0; transform: scale(0); }
-            to { opacity: 1; transform: scale(1); }
         }
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
         
-        #zoom-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            padding: 20px;
-        }
-        #zoom-modal img {
-            max-width: 90%;
-            max-height: 80%;
-            border: 3px solid #f1c40f;
-            border-radius: 12px;
-        }
-        #zoom-modal button {
-            margin-top: 20px;
-            padding: 12px 30px;
-            background: #ff4b2b;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
+        /* Модальное окно для выбора места фишки */
         #meeple-modal {
             display: none;
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             padding: 20px;
-            gap: 15px;
         }
-        #meeple-modal h3 { color: #f1c40f; margin-bottom: 10px; }
+        #meeple-modal h3 { color: #f1c40f; margin-bottom: 15px; font-size: 20px; text-align: center; }
+        
+        /* Увеличенная карточка для выбора */
+        #meeple-tile-container {
+            position: relative;
+            width: 280px; height: 280px;
+            border: 3px solid #f1c40f;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #1e2633;
+        }
+        #meeple-tile-container img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        
+        /* Кликабельные зоны на увеличенной карточке */
+        .meeple-zone {
+            position: absolute;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .meeple-zone:hover { background: rgba(46, 204, 113, 0.5); }
+        
+        /* Верхняя зона (дорога/город) */
+        .zone-top { top: 0; left: 0; width: 100%; height: 40%; }
+        /* Нижняя зона */
+        .zone-bottom { bottom: 0; left: 0; width: 100%; height: 40%; }
+        /* Левая зона */
+        .zone-left { top: 0; left: 0; width: 40%; height: 100%; }
+        /* Правая зона */
+        .zone-right { top: 0; right: 0; width: 40%; height: 100%; }
+        
         #meeple-modal button {
-            padding: 15px 30px;
-            background: #4facfe;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #e74c3c;
             color: white;
             border: none;
             border-radius: 8px;
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            width: 80%;
         }
     </style>
 </head>
@@ -297,17 +282,18 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНЫЕ ОКНА -->
-    <div id="zoom-modal" onclick="closeZoom()">
-        <img id="zoom-img" src="">
-        <button>Закрыть</button>
-    </div>
-
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ ВЫБОРА МЕСТА ФИШКИ -->
     <div id="meeple-modal">
         <h3>Куда поставить фишку?</h3>
-        <button id="meeple-btn-road" onclick="placeMeeple('road')">🛣️ На дорогу</button>
-        <button id="meeple-btn-city" onclick="placeMeeple('city')">🏰 В город</button>
-        <button onclick="closeMeepleModal()" style="background: #e74c3c;">Отмена</button>
+        <div id="meeple-tile-container">
+            <img id="meeple-tile-img" src="">
+            <!-- Зоны для клика -->
+            <div class="meeple-zone zone-top" onclick="placeMeeple('top')"></div>
+            <div class="meeple-zone zone-bottom" onclick="placeMeeple('bottom')"></div>
+            <div class="meeple-zone zone-left" onclick="placeMeeple('left')"></div>
+            <div class="meeple-zone zone-right" onclick="placeMeeple('right')"></div>
+        </div>
+        <button onclick="closeMeepleModal()">Отмена</button>
     </div>
 
     <!-- КОНЕЦ ИГРЫ -->
@@ -743,6 +729,7 @@
             nextCarTurn();
         }
 
+        // === УМНАЯ ПОСТАНОВКА ФИШКИ ===
         function startMeeplePlacement() {
             if (lastPlacedR === -1 || lastPlacedC === -1) {
                 document.getElementById('status-text').innerText = "Сначала поставьте тайл!";
@@ -753,28 +740,11 @@
                 return;
             }
             
-            // Проверяем, какие стороны есть у только что поставленного тайла
-            const tileData = TILE_DATA[carBoardData[lastPlacedR][lastPlacedC].imgIndex];
-            const rotatedSides = getRotatedSides(tileData, carBoardData[lastPlacedR][lastPlacedC].rotation);
-            
-            // Собираем уникальные типы (без поля F)
-            const availableZones = new Set();
-            for (let side in rotatedSides) {
-                const val = rotatedSides[side];
-                if (val === 'R') availableZones.add('road');
-                if (val === 'C') availableZones.add('city');
-            }
-            // Если есть центр (монастырь), тоже можно ставить
-            if (tileData.center === 'M') availableZones.add('city');
-
-            // Показываем только доступные кнопки
-            document.getElementById('meeple-btn-road').style.display = availableZones.has('road') ? 'block' : 'none';
-            document.getElementById('meeple-btn-city').style.display = availableZones.has('city') ? 'block' : 'none';
-
-            if (availableZones.size === 0) {
-                document.getElementById('status-text').innerText = "На этом тайле некуда ставить фишку (только поля)!";
-                return;
-            }
+            // Показываем модальное окно с увеличенной карточкой
+            const tileData = carBoardData[lastPlacedR][lastPlacedC];
+            const img = document.getElementById('meeple-tile-img');
+            img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
+            img.style.transform = `rotate(${tileData.rotation}deg)`;
             
             document.getElementById('meeple-modal').style.display = 'flex';
         }
@@ -786,15 +756,18 @@
         function placeMeeple(zone) {
             if (lastPlacedR === -1 || lastPlacedC === -1) return;
 
+            // Закрываем модалку
+            closeMeepleModal();
+
+            // Ставим фишку
             carBoardData[lastPlacedR][lastPlacedC].meeple = {
                 color: currentPlayer,
-                zone: zone
+                zone: zone // 'top', 'bottom', 'left', 'right'
             };
             
             renderCarBoard();
             updatePlayerPanels();
-            closeMeepleModal();
-            document.getElementById('status-text').innerText = `Фишка поставлена на ${zone === 'road' ? 'дорогу' : 'город'}!`;
+            document.getElementById('status-text').innerText = `Фишка поставлена!`;
             nextCarTurn();
         }
 
@@ -853,6 +826,7 @@
                         img.className = 'tile-img';
                         img.style.transform = `rotate(${tileData.rotation}deg)`;
                         
+                        // Клик для увеличения
                         img.addEventListener('click', (e) => {
                             e.stopPropagation();
                             document.getElementById('zoom-img').src = img.src;
@@ -864,8 +838,13 @@
                         if (tileData.meeple) {
                             const meeple = document.createElement('div');
                             meeple.className = `meeple ${tileData.meeple.color}`;
-                            if (tileData.meeple.zone === 'road') meeple.style.bottom = '5px';
-                            else if (tileData.meeple.zone === 'city') meeple.style.top = '5px';
+                            
+                            // Позиционируем фишку в зависимости от выбранной зоны
+                            if (tileData.meeple.zone === 'top') meeple.style.top = '5px';
+                            else if (tileData.meeple.zone === 'bottom') meeple.style.bottom = '5px';
+                            else if (tileData.meeple.zone === 'left') meeple.style.left = '5px';
+                            else if (tileData.meeple.zone === 'right') meeple.style.right = '5px';
+                            
                             cell.appendChild(meeple);
                         }
                     }
