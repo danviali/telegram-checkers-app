@@ -751,6 +751,30 @@
 
         function placeMeeple(zone) {
             if (lastPlacedR === -1 || lastPlacedC === -1) return;
+            
+            // Проверка: можно ли ставить на эту зону
+            const tileData = TILE_DATA[carBoardData[lastPlacedR][lastPlacedC].imgIndex];
+            const rotatedSides = getRotatedSides(tileData, carBoardData[lastPlacedR][lastPlacedC].rotation);
+            
+            let isValidZone = false;
+            if (zone === 'center') {
+                if (tileData.center === 'M') isValidZone = true;
+            } else if (zone === 'top') {
+                if (rotatedSides.top === 'R' || rotatedSides.top === 'C') isValidZone = true;
+            } else if (zone === 'bottom') {
+                if (rotatedSides.bottom === 'R' || rotatedSides.bottom === 'C') isValidZone = true;
+            } else if (zone === 'left') {
+                if (rotatedSides.left === 'R' || rotatedSides.left === 'C') isValidZone = true;
+            } else if (zone === 'right') {
+                if (rotatedSides.right === 'R' || rotatedSides.right === 'C') isValidZone = true;
+            }
+
+            if (!isValidZone) {
+                document.getElementById('status-text').innerText = "Сюда нельзя ставить фишку (только трава/река)!";
+                closeMeepleModal();
+                return;
+            }
+
             closeMeepleModal();
 
             carBoardData[lastPlacedR][lastPlacedC].meeple = {
@@ -783,7 +807,6 @@
 
         function checkCompletedObjects() {
             // Упрощенная проверка (для демо)
-            // Полная логика требует обхода графа, что здесь опущено для краткости
         }
 
         function renderCarBoard() {
