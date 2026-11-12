@@ -80,6 +80,7 @@
             border: 2px solid transparent;
             font-size: 16px;
             font-weight: bold;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
         .player-panel.active { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
         
@@ -97,17 +98,18 @@
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
+            transition: transform 0.3s;
         }
         #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
         
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: transform 0.1s, background 0.2s; }
         .btn:active { transform: scale(0.95); }
         .btn-green { background: #2ecc71; }
         .btn-orange { background: #e67e22; }
         .btn-purple { background: #9b59b6; }
         
-        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; }
+        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; min-height: 24px; }
         
         #board-wrapper {
             width: 100%;
@@ -146,14 +148,28 @@
         
         .car-cell.highlight { background: rgba(46, 204, 113, 0.3); border: 1px solid #2ecc71; }
         
-        .tile-img { width: 100%; height: 100%; object-fit: cover; }
+        /* Анимация появления тайла */
+        .tile-img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            animation: tileAppear 0.3s ease-out;
+        }
+        @keyframes tileAppear {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
         
+        /* Анимация появления фишки */
         .meeple { 
             width: 16px; height: 16px; 
             border-radius: 50%; 
             position: absolute; 
             border: 2px solid white;
             z-index: 10;
+            animation: meepleAppear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes meepleAppear {
+            from { opacity: 0; transform: scale(0); }
+            to { opacity: 1; transform: scale(1); }
         }
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
@@ -289,9 +305,8 @@
 
     <div id="meeple-modal">
         <h3>Куда поставить фишку?</h3>
-        <button onclick="placeMeeple('road')">🛣️ На дорогу</button>
-        <button onclick="placeMeeple('city')">🏰 В город</button>
-        <button onclick="placeMeeple('field')">🌿 На поле</button>
+        <button id="meeple-btn-road" onclick="placeMeeple('road')">🛣️ На дорогу</button>
+        <button id="meeple-btn-city" onclick="placeMeeple('city')">🏰 В город</button>
         <button onclick="closeMeepleModal()" style="background: #e74c3c;">Отмена</button>
     </div>
 
@@ -346,7 +361,7 @@
         let isAnimating = false;
 
         // ==========================================
-        // БАЗА ДАННЫХ ТАЙЛОВ (ВСТАВЛЕНА ВАША БАЗА)
+        // БАЗА ДАННЫХ ТАЙЛОВ
         // ==========================================
         const TILE_DATA = {
             1: { left: "R", top: "F", right: "R", bottom: "F" },
@@ -641,15 +656,12 @@
             preview.appendChild(img);
         }
 
-        // ПРОВЕРКА СТЫКОВКИ С УЧЕТОМ ПОВОРОТА
         function checkCarPlacement(r, c) {
             const tileData = TILE_DATA[currentTileIndex];
-            if (!tileData) return false; // Если карточки нет в базе, не разрешаем ставить (для строгости)
+            if (!tileData) return false;
 
             let hasNeighbor = false;
             const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-            // Получаем повернутые стороны текущего тайла
             const rotatedSides = getRotatedSides(tileData, currentRotation);
 
             for (let [dr, dc] of dirs) {
@@ -670,7 +682,6 @@
                 if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
                 if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
 
-                // Если стороны не совпадают, ставить нельзя
                 if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
                     return false;
                 }
@@ -742,6 +753,29 @@
                 return;
             }
             
+            // Проверяем, какие стороны есть у только что поставленного тайла
+            const tileData = TILE_DATA[carBoardData[lastPlacedR][lastPlacedC].imgIndex];
+            const rotatedSides = getRotatedSides(tileData, carBoardData[lastPlacedR][lastPlacedC].rotation);
+            
+            // Собираем уникальные типы (без поля F)
+            const availableZones = new Set();
+            for (let side in rotatedSides) {
+                const val = rotatedSides[side];
+                if (val === 'R') availableZones.add('road');
+                if (val === 'C') availableZones.add('city');
+            }
+            // Если есть центр (монастырь), тоже можно ставить
+            if (tileData.center === 'M') availableZones.add('city');
+
+            // Показываем только доступные кнопки
+            document.getElementById('meeple-btn-road').style.display = availableZones.has('road') ? 'block' : 'none';
+            document.getElementById('meeple-btn-city').style.display = availableZones.has('city') ? 'block' : 'none';
+
+            if (availableZones.size === 0) {
+                document.getElementById('status-text').innerText = "На этом тайле некуда ставить фишку (только поля)!";
+                return;
+            }
+            
             document.getElementById('meeple-modal').style.display = 'flex';
         }
 
@@ -760,7 +794,7 @@
             renderCarBoard();
             updatePlayerPanels();
             closeMeepleModal();
-            document.getElementById('status-text').innerText = `Фишка поставлена на ${zone}!`;
+            document.getElementById('status-text').innerText = `Фишка поставлена на ${zone === 'road' ? 'дорогу' : 'город'}!`;
             nextCarTurn();
         }
 
@@ -832,7 +866,6 @@
                             meeple.className = `meeple ${tileData.meeple.color}`;
                             if (tileData.meeple.zone === 'road') meeple.style.bottom = '5px';
                             else if (tileData.meeple.zone === 'city') meeple.style.top = '5px';
-                            else if (tileData.meeple.zone === 'field') meeple.style.left = '5px';
                             cell.appendChild(meeple);
                         }
                     }
