@@ -80,6 +80,7 @@
             border: 2px solid transparent;
             font-size: 16px;
             font-weight: bold;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
         .player-panel.active { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
         
@@ -97,17 +98,18 @@
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
+            transition: transform 0.3s;
         }
         #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
         
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; transition: transform 0.1s, background 0.2s; }
         .btn:active { transform: scale(0.95); }
         .btn-green { background: #2ecc71; }
         .btn-orange { background: #e67e22; }
         .btn-purple { background: #9b59b6; }
         
-        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; }
+        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; min-height: 24px; }
         
         #board-wrapper {
             width: 100%;
@@ -117,8 +119,10 @@
             border-radius: 10px;
             border: 1px solid #1e2633;
             position: relative;
-            touch-action: none;
+            touch-action: none; /* Отключаем скролл браузера */
+            cursor: grab;
         }
+        #board-wrapper:active { cursor: grabbing; }
         
         #carcassonne-board { 
             display: grid; 
@@ -144,9 +148,20 @@
             position: relative;
         }
         
-        .car-cell.highlight { background: rgba(46, 204, 113, 0.3); border: 1px solid #2ecc71; }
+        /* Подсветка центра: тусклая всегда */
+        .car-cell.center-highlight { 
+            background: rgba(46, 204, 113, 0.15); 
+            border: 1px solid rgba(46, 204, 113, 0.3); 
+        }
         
-        .tile-img { width: 100%; height: 100%; object-fit: cover; }
+        .tile-img { 
+            width: 100%; height: 100%; object-fit: cover; 
+            animation: tileAppear 0.3s ease-out;
+        }
+        @keyframes tileAppear {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
         
         .meeple { 
             width: 16px; height: 16px; 
@@ -154,6 +169,11 @@
             position: absolute; 
             border: 2px solid white;
             z-index: 10;
+            animation: meepleAppear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes meepleAppear {
+            from { opacity: 0; transform: scale(0); }
+            to { opacity: 1; transform: scale(1); }
         }
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
@@ -173,7 +193,6 @@
         }
         #meeple-modal h3 { color: #f1c40f; margin-bottom: 15px; font-size: 20px; text-align: center; }
         
-        /* Увеличенная карточка для выбора */
         #meeple-tile-container {
             position: relative;
             width: 280px; height: 280px;
@@ -186,7 +205,6 @@
             width: 100%; height: 100%; object-fit: cover;
         }
         
-        /* Кликабельные зоны на увеличенной карточке */
         .meeple-zone {
             position: absolute;
             cursor: pointer;
@@ -199,7 +217,6 @@
         }
         .meeple-zone:hover { background: rgba(46, 204, 113, 0.5); color: white; }
         
-        /* Зоны */
         .zone-top { top: 0; left: 0; width: 100%; height: 35%; }
         .zone-bottom { bottom: 0; left: 0; width: 100%; height: 35%; }
         .zone-left { top: 35%; left: 0; width: 35%; height: 30%; }
@@ -217,6 +234,38 @@
             font-weight: bold;
             cursor: pointer;
         }
+
+        /* Модальное окно для увеличения картинки */
+        #zoom-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #zoom-modal img {
+            max-width: 90%;
+            max-height: 80%;
+            border: 3px solid #f1c40f;
+            border-radius: 12px;
+        }
+        #zoom-modal button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #ff4b2b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
     </style>
 </head>
 <body>
@@ -258,7 +307,7 @@
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
             <span class="blue-name">👤 Игрок 1 (Синие)</span>
-            <span id="player1-score" style="font-size: 18px;">0</span>
+            <span style="font-size: 18px;"><span id="player1-meeples">🧙‍♂️ 7</span></span>
         </div>
 
         <div id="controls-top">
@@ -281,11 +330,16 @@
 
         <div class="player-panel" id="player2-panel">
             <span class="red-name">👤 Игрок 2 (Красные)</span>
-            <span id="player2-score" style="font-size: 18px;">0</span>
+            <span style="font-size: 18px;"><span id="player2-meeples">🧙‍♂️ 7</span></span>
         </div>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ ВЫБОРА МЕСТА ФИШКИ -->
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+    <div id="zoom-modal" onclick="closeZoom()">
+        <img id="zoom-img" src="">
+        <button>Закрыть</button>
+    </div>
+
     <div id="meeple-modal">
         <h3>Куда поставить фишку?</h3>
         <div id="meeple-tile-container">
@@ -478,8 +532,8 @@
         let currentRotation = 0;
         let currentPlayer = 'blue'; 
         
-        let bluePoints = 0;
-        let redPoints = 0;
+        let blueMeeples = 7;
+        let redMeeples = 7;
         let carTimeLeft = CAR_TURN_TIME;
         let carTurnTimer = null;
         
@@ -517,9 +571,10 @@
                 }
             }
             
+            // Всегда подсвечиваем центр тусклым
             const center = Math.floor(BOARD_SIZE / 2);
             const centerCell = document.querySelector(`.car-cell[data-row="${center}"][data-col="${center}"]`);
-            if (centerCell) centerCell.classList.add('highlight');
+            if (centerCell) centerCell.classList.add('center-highlight');
 
             updatePlayerPanels();
             startCarTimer();
@@ -624,8 +679,6 @@
             currentTileIndex = Math.floor(Math.random() * TOTAL_TILES) + 1;
             currentRotation = 0;
             updatePreview();
-            
-            document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
             
             document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}. Выберите клетку.`;
         }
@@ -772,6 +825,10 @@
                 zone: zone // 'top', 'bottom', 'left', 'right', 'center'
             };
             
+            // Уменьшаем количество фишек
+            if (currentPlayer === 'blue') blueMeeples--;
+            else redMeeples--;
+            
             renderCarBoard();
             updatePlayerPanels();
             document.getElementById('status-text').innerText = `Фишка поставлена!`;
@@ -786,8 +843,9 @@
         }
 
         function updatePlayerPanels() {
-            document.getElementById('player1-score').innerText = bluePoints;
-            document.getElementById('player2-score').innerText = redPoints;
+            // Обновляем смайлики с количеством фишек
+            document.getElementById('player1-meeples').innerText = `🧙‍♂️ ${blueMeeples}`;
+            document.getElementById('player2-meeples').innerText = `🧙‍♂️ ${redMeeples}`;
             
             const p1Panel = document.getElementById('player1-panel');
             const p2Panel = document.getElementById('player2-panel');
