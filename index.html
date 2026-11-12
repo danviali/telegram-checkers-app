@@ -346,8 +346,119 @@
         let isAnimating = false;
 
         // ==========================================
-        // КАРКАССОН
+        // БАЗА ДАННЫХ ТАЙЛОВ (ВСТАВЛЕНА ВАША БАЗА)
         // ==========================================
+        const TILE_DATA = {
+            1: { left: "R", top: "F", right: "R", bottom: "F" },
+            2: { left: "R", top: "F", right: "R", bottom: "F" },
+            3: { left: "R", top: "F", right: "R", bottom: "F" },
+            4: { left: "R", top: "F", right: "R", bottom: "F" },
+            5: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
+            6: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
+            7: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
+            8: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
+            9: { left: "F", top: "R", right: "F", bottom: "F", center: "M" },
+            10: { left: "R", top: "F", right: "R", bottom: "C" },
+            11: { left: "R", top: "F", right: "R", bottom: "C" },
+            12: { left: "R", top: "F", right: "F", bottom: "F", center: "M" },
+            13: { left: "F", top: "F", right: "F", bottom: "C" },
+            14: { left: "F", top: "F", right: "F", bottom: "C" },
+            15: { left: "F", top: "C", right: "F", bottom: "F" },
+            16: { left: "F", top: "C", right: "F", bottom: "C" },
+            17: { left: "F", top: "C", right: "F", bottom: "C" },
+            18: { left: "F", top: "F", right: "F", bottom: "C" },
+            19: { left: "F", top: "C", right: "F", bottom: "C" },
+            20: { left: "F", top: "C", right: "F", bottom: "C" },
+            21: { left: "C", top: "C", right: "R", bottom: "R", crest: true },
+            22: { left: "R", top: "C", right: "C", bottom: "R", crest: true },
+            23: { left: "C", top: "C", right: "R", bottom: "R" },
+            24: { left: "R", top: "C", right: "C", bottom: "R" },
+            25: { left: "F", top: "R", right: "R", bottom: "C" },
+            26: { left: "F", top: "R", right: "R", bottom: "C" },
+            27: { left: "R", top: "R", right: "F", bottom: "C" },
+            28: { left: "R", top: "R", right: "F", bottom: "C" },
+            29: { left: "F", top: "C", right: "C", bottom: "C", crest: true },
+            30: { left: "C", top: "C", right: "F", bottom: "C" },
+            31: { left: "F", top: "C", right: "C", bottom: "C" },
+            32: { left: "C", top: "C", right: "F", bottom: "C" },
+            33: { left: "R", top: "C", right: "R", bottom: "R" },
+            34: { left: "R", top: "C", right: "C", bottom: "R" },
+            35: { left: "C", top: "C", right: "F", bottom: "F", crest: true },
+            36: { left: "F", top: "C", right: "C", bottom: "F" },
+            37: { left: "F", top: "R", right: "R", bottom: "F" },
+            38: { left: "R", top: "R", right: "C", bottom: "R" },
+            39: { left: "C", top: "F", right: "C", bottom: "F", crest: true },
+            40: { left: "C", top: "F", right: "F", bottom: "C" },
+            41: { left: "F", top: "F", right: "C", bottom: "C", crest: true },
+            42: { left: "C", top: "R", right: "C", bottom: "C", crest: true },
+            43: { left: "C", top: "F", right: "C", bottom: "F" },
+            44: { left: "C", top: "C", right: "C", bottom: "C", crest: true },
+            45: { left: "C", top: "C", right: "C", bottom: "R", crest: true },
+            46: { left: "C", top: "C", right: "F", bottom: "F" },
+            47: { left: "C", top: "C", right: "F", bottom: "F" },
+            48: { left: "F", top: "F", right: "C", bottom: "C" },
+            49: { left: "F", top: "F", right: "F", bottom: "W" },
+            50: { left: "F", top: "F", right: "F", bottom: "W" },
+            51: { left: "F", top: "F", right: "R", bottom: "R" },
+            52: { left: "R", top: "R", right: "F", bottom: "R" },
+            53: { left: "R", top: "W", right: "C", bottom: "W" },
+            54: { left: "C", top: "W", right: "C", bottom: "W" },
+            55: { left: "C", top: "R", right: "R", bottom: "R" },
+            56: { left: "R", top: "R", right: "F", bottom: "R" },
+            57: { left: "F", top: "W", right: "W", bottom: "F" },
+            58: { left: "W", top: "W", right: "F", bottom: "W" },
+            59: { left: "F", top: "R", right: "R", bottom: "F" },
+            60: { left: "R", top: "R", right: "F", bottom: "R" },
+            61: { left: "F", top: "F", right: "W", bottom: "W" },
+            62: { left: "W", top: "W", right: "R", bottom: "R" },
+            63: { left: "R", top: "F", right: "R", bottom: "F" },
+            64: { left: "R", top: "R", right: "R", bottom: "F" },
+            65: { left: "C", top: "W", right: "W", bottom: "C", crest: true },
+            66: { left: "W", top: "R", right: "W", bottom: "R" },
+            67: { left: "W", top: "F", right: "W", bottom: "F", center: "M" },
+            68: { left: "W", top: "F", right: "C", bottom: "F" },
+            69: { left: "C", top: "C", right: "F", bottom: "C" },
+            70: { left: "F", top: "R", right: "R", bottom: "F" },
+            71: { left: "R", top: "F", right: "F", bottom: "R" },
+            72: { left: "F", top: "F", right: "R", bottom: "R" },
+            73: { left: "C", top: "F", right: "R", bottom: "F" },
+            74: { left: "R", top: "C", right: "R", bottom: "C", crest: true },
+            75: { left: "R", top: "R", right: "F", bottom: "R" },
+            76: { left: "F", top: "C", right: "R", bottom: "C" },
+            77: { left: "F", top: "F", right: "C", bottom: "F" },
+            78: { left: "C", top: "C", right: "F", bottom: "C", crest: true },
+            79: { left: "F", top: "R", right: "F", bottom: "R", center: "M" },
+            80: { left: "F", top: "C", right: "F", bottom: "C" },
+            81: { left: "C", top: "F", right: "C", bottom: "C" },
+            82: { left: "C", top: "C", right: "F", bottom: "R" },
+            83: { left: "F", top: "R", right: "F", bottom: "R" },
+            84: { left: "F", top: "C", right: "C", bottom: "F" },
+            85: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
+            86: { left: "C", top: "R", right: "R", bottom: "C", crest: true },
+            87: { left: "R", top: "R", right: "R", bottom: "R" },
+            88: { left: "R", top: "F", right: "C", bottom: "C" },
+            89: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
+            90: { left: "C", top: "C", right: "C", bottom: "C" },
+            91: { left: "C", top: "R", right: "C", bottom: "R" },
+            92: { left: "C", top: "C", right: "R", bottom: "R" },
+            93: { left: "C", top: "C", right: "R", bottom: "F" },
+            94: { left: "R", top: "C", right: "F", bottom: "R" },
+            95: { left: "F", top: "R", right: "R", bottom: "F" },
+            96: { left: "R", top: "R", right: "R", bottom: "R" },
+            97: { left: "C", top: "F", right: "R", bottom: "R" },
+            98: { left: "R", top: "F", right: "R", bottom: "F" },
+            99: { left: "R", top: "F", right: "C", bottom: "R" },
+            100: { left: "C", top: "C", right: "R", bottom: "C" },
+            101: { left: "F", top: "R", right: "F", bottom: "R" },
+            102: { left: "F", top: "F", right: "C", bottom: "F" },
+            103: { left: "C", top: "R", right: "F", bottom: "R" },
+            104: { left: "F", top: "C", right: "F", bottom: "C", crest: true },
+            105: { left: "F", top: "R", right: "R", bottom: "F" },
+            106: { left: "R", top: "F", right: "R", bottom: "F" },
+            107: { left: "R", top: "R", right: "R", bottom: "R" },
+            108: { left: "R", top: "C", right: "R", bottom: "F" }
+        };
+
         const BOARD_SIZE = 15;
         const TILE_FOLDER = ""; 
         const TOTAL_TILES = 108;
@@ -530,6 +641,55 @@
             preview.appendChild(img);
         }
 
+        // ПРОВЕРКА СТЫКОВКИ С УЧЕТОМ ПОВОРОТА
+        function checkCarPlacement(r, c) {
+            const tileData = TILE_DATA[currentTileIndex];
+            if (!tileData) return false; // Если карточки нет в базе, не разрешаем ставить (для строгости)
+
+            let hasNeighbor = false;
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+            // Получаем повернутые стороны текущего тайла
+            const rotatedSides = getRotatedSides(tileData, currentRotation);
+
+            for (let [dr, dc] of dirs) {
+                let nr = r + dr, nc = c + dc;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                if (carBoardData[nr][nc] === null) continue;
+
+                hasNeighbor = true;
+                const neighborData = carBoardData[nr][nc];
+                const neighborTile = TILE_DATA[neighborData.imgIndex];
+                if (!neighborTile) continue;
+                
+                const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
+
+                let currentSide, neighborSide;
+                if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
+                if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
+                if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
+                if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
+
+                // Если стороны не совпадают, ставить нельзя
+                if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
+                    return false;
+                }
+            }
+            return hasNeighbor;
+        }
+
+        function getRotatedSides(tile, rotation) {
+            let sides = { ...tile };
+            if (rotation === 90) {
+                sides = { top: tile.left, right: tile.top, bottom: tile.right, left: tile.bottom };
+            } else if (rotation === 180) {
+                sides = { top: tile.bottom, right: tile.left, bottom: tile.top, left: tile.right };
+            } else if (rotation === 270) {
+                sides = { top: tile.right, right: tile.bottom, bottom: tile.left, left: tile.top };
+            }
+            return sides;
+        }
+
         function onCarCellClick(r, c) {
             if (currentTileIndex === null) {
                 document.getElementById('status-text').innerText = "Сначала возьмите тайл!";
@@ -548,16 +708,8 @@
                     return;
                 }
             } else {
-                let hasNeighbor = false;
-                const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
-                for (let [dr, dc] of dirs) {
-                    let nr = r + dr, nc = c + dc;
-                    if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && carBoardData[nr][nc] !== null) {
-                        hasNeighbor = true;
-                    }
-                }
-                if (!hasNeighbor) {
-                    document.getElementById('status-text').innerText = "Тайл должен касаться другого тайла!";
+                if (!checkCarPlacement(r, c)) {
+                    document.getElementById('status-text').innerText = "Сюда нельзя ставить (не совпадают края)!";
                     return;
                 }
             }
