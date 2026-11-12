@@ -106,6 +106,7 @@
         .btn-green { background: #2ecc71; }
         .btn-orange { background: #e67e22; }
         .btn-purple { background: #9b59b6; }
+        .btn-red { background: #e74c3c; display: none; }
         
         #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; min-height: 24px; }
         
@@ -267,6 +268,9 @@
             <div class="btn-row" style="margin-top: 10px;">
                 <button class="btn btn-orange" onclick="skipTurn()">Пропустить</button>
                 <button class="btn btn-purple" id="btn-meeple" onclick="startMeeplePlacement()">Поставить фишку</button>
+            </div>
+            <div class="btn-row" style="margin-top: 10px;">
+                <button class="btn btn-red" id="btn-replace" onclick="replaceTile()">🔄 Поменять</button>
             </div>
         </div>
         
@@ -633,13 +637,94 @@
             currentTileIndex = Math.floor(Math.random() * TOTAL_TILES) + 1;
             currentRotation = 0;
             updatePreview();
-            document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}.`;
+            
+            checkIfTileCanBePlaced();
+        }
+
+        function checkIfTileCanBePlaced() {
+            if (currentTileIndex === null) return;
+            
+            const tileData = TILE_DATA[currentTileIndex];
+            if (!tileData) return;
+
+            let canPlace = false;
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (carBoardData[r][c] !== null) continue;
+                    
+                    for (let rot = 0; rot < 360; rot += 90) {
+                        if (isValidPlacement(r, c, currentTileIndex, rot)) {
+                            canPlace = true;
+                            break;
+                        }
+                    }
+                    if (canPlace) break;
+                }
+                if (canPlace) break;
+            }
+
+            document.getElementById('btn-replace').style.display = canPlace ? 'none' : 'block';
+            if (!canPlace) {
+                document.getElementById('status-text').innerText = "Этот тайл никуда не подходит! Нажмите 'Поменять'.";
+            } else {
+                document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}.`;
+            }
+        }
+
+        function isValidPlacement(r, c, tileIndex, rotation) {
+            const tileData = TILE_DATA[tileIndex];
+            if (!tileData) return false;
+
+            const isFirstMove = carBoardData.flat().every(cell => cell === null);
+            if (isFirstMove) {
+                const center = Math.floor(BOARD_SIZE / 2);
+                return r === center && c === center;
+            }
+
+            const rotatedSides = getRotatedSides(tileData, rotation);
+            let hasNeighbor = false;
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+            for (let [dr, dc] of dirs) {
+                let nr = r + dr, nc = c + dc;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                if (carBoardData[nr][nc] === null) continue;
+
+                hasNeighbor = true;
+                const neighborData = carBoardData[nr][nc];
+                const neighborTile = TILE_DATA[neighborData.imgIndex];
+                if (!neighborTile) continue;
+                
+                const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
+
+                let currentSide, neighborSide;
+                if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
+                if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
+                if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
+                if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
+
+                if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
+                    return false;
+                }
+            }
+            return hasNeighbor;
         }
 
         function rotateTile() {
             if (currentTileIndex === null) return;
             currentRotation = (currentRotation + 90) % 360;
             updatePreview();
+            checkIfTileCanBePlaced();
+        }
+
+        function replaceTile() {
+            if (currentTileIndex === null) return;
+            currentTileIndex = null;
+            currentRotation = 0;
+            updatePreview();
+            document.getElementById('btn-replace').style.display = 'none';
+            document.getElementById('status-text').innerText = "Тайл сброшен. Возьмите новый.";
+            drawTile();
         }
 
         function updatePreview() {
@@ -671,49 +756,9 @@
             if (currentTileIndex === null) return;
             if (carBoardData[r][c] !== null) return;
 
-            const isFirstMove = carBoardData.flat().every(cell => cell === null);
-            if (isFirstMove) {
-                const center = Math.floor(BOARD_SIZE / 2);
-                if (r !== center || c !== center) {
-                    document.getElementById('status-text').innerText = "Первый тайл должен быть в центре!";
-                    return;
-                }
-            } else {
-                const tileData = TILE_DATA[currentTileIndex];
-                if (!tileData) return;
-                const rotatedSides = getRotatedSides(tileData, currentRotation);
-                let hasNeighbor = false;
-                let isValid = true;
-                const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-                for (let [dr, dc] of dirs) {
-                    let nr = r + dr, nc = c + dc;
-                    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-                    if (carBoardData[nr][nc] === null) continue;
-
-                    hasNeighbor = true;
-                    const neighborData = carBoardData[nr][nc];
-                    const neighborTile = TILE_DATA[neighborData.imgIndex];
-                    if (!neighborTile) continue;
-                    
-                    const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
-
-                    let currentSide, neighborSide;
-                    if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
-                    if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
-                    if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
-                    if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
-
-                    if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
-                        isValid = false;
-                        break;
-                    }
-                }
-
-                if (!hasNeighbor || !isValid) {
-                    document.getElementById('status-text').innerText = "Нельзя ставить здесь!";
-                    return;
-                }
+            if (!isValidPlacement(r, c, currentTileIndex, currentRotation)) {
+                document.getElementById('status-text').innerText = "Нельзя ставить здесь!";
+                return;
             }
 
             carBoardData[r][c] = {
@@ -729,6 +774,7 @@
             currentTileIndex = null;
             currentRotation = 0;
             updatePreview();
+            document.getElementById('btn-replace').style.display = 'none';
             
             document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'blue' ? 'Синих' : 'Красных'}.`;
         }
@@ -752,7 +798,6 @@
         function placeMeeple(zone) {
             if (lastPlacedR === -1 || lastPlacedC === -1) return;
             
-            // Проверка: можно ли ставить на эту зону
             const tileData = TILE_DATA[carBoardData[lastPlacedR][lastPlacedC].imgIndex];
             const rotatedSides = getRotatedSides(tileData, carBoardData[lastPlacedR][lastPlacedC].rotation);
             
