@@ -52,6 +52,7 @@
         .btn-orange { background: #e67e22; }
         .btn-purple { background: #9b59b6; }
         .btn-red { background: #e74c3c; display: none; }
+        .btn-end { background: #c0392b; margin-top: 15px; }
         
         #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; min-height: 24px; }
         
@@ -105,6 +106,7 @@
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
         
+        /* Модальное окно для выбора места фишки */
         #meeple-modal {
             display: none;
             position: fixed;
@@ -158,11 +160,44 @@
             font-weight: bold;
             cursor: pointer;
         }
+
+        /* Экран финального подсчёта */
+        #final-score-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(11, 14, 20, 0.98);
+            z-index: 3000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+        #final-score-screen h2 { color: #f1c40f; margin-bottom: 20px; font-size: 24px; }
+        #score-map-img {
+            max-width: 90%;
+            max-height: 60vh;
+            border: 3px solid #f1c40f;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        #final-score-screen button {
+            padding: 15px 30px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-    <div id="version-label"># Каркассон v2.0</div>
+    <div id="version-label"># Каркассон v3.0 (с картой)</div>
 
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
@@ -184,6 +219,7 @@
             <div class="btn-row" style="margin-top: 10px;">
                 <button class="btn btn-red" id="btn-replace" onclick="replaceTile()">🔄 Поменять</button>
             </div>
+            <button class="btn btn-end" onclick="endGame()">🏁 Закончить игру и подсчитать очки</button>
         </div>
         
         <div id="status-text">Нажми "Взять тайл"</div>
@@ -199,6 +235,7 @@
         <div style="font-size: 14px; color: #f1c40f; margin-top: 5px;">Очки: <span id="player2-score">0</span></div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ ВЫБОРА МЕСТА ФИШКИ -->
     <div id="meeple-modal">
         <h3>Куда поставить фишку?</h3>
         <div id="meeple-tile-container">
@@ -210,6 +247,14 @@
             <div class="meeple-zone zone-center" onclick="placeMeeple('center')">⛪</div>
         </div>
         <button onclick="closeMeepleModal()">Отмена</button>
+    </div>
+
+    <!-- ЭКРАН ФИНАЛЬНОГО ПОДСЧЁТА -->
+    <div id="final-score-screen">
+        <h2>Игра окончена!</h2>
+        <img id="score-map-img" src="map_1.jpg" alt="Карта подсчёта очков">
+        <p style="margin-bottom: 20px; color: #c9d1d9;">Подсчитайте очки на карте и введите итоговый результат.</p>
+        <button onclick="restartGame()">🔄 Играть снова</button>
     </div>
 
     <script>
@@ -669,7 +714,7 @@
             }
 
             if (!isValidZone) {
-                document.getElementById('status-text').innerText = "Сюда нельзя ставить фишку (только трава/река)!";
+                document.getElementById('status-text').innerText = "В это место фишку нельзя поставить! Выбери дорогу или город.";
                 closeMeepleModal();
                 return;
             }
@@ -736,6 +781,16 @@
                     }
                 }
             }
+        }
+
+        // === ЗАВЕРШЕНИЕ ИГРЫ И ПОКАЗ КАРТЫ ===
+        function endGame() {
+            document.getElementById('final-score-screen').style.display = 'flex';
+        }
+
+        function restartGame() {
+            document.getElementById('final-score-screen').style.display = 'none';
+            initCarcassonne();
         }
 
         // Запуск
