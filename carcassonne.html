@@ -64,7 +64,7 @@
             border-radius: 10px;
             border: 1px solid #1e2633;
             position: relative;
-            touch-action: none;
+            touch-action: none; /* Отключаем скролл браузера */
             cursor: grab;
         }
         #board-wrapper:active { cursor: grabbing; }
@@ -176,13 +176,35 @@
             text-align: center;
         }
         #final-score-screen h2 { color: #f1c40f; margin-bottom: 20px; font-size: 24px; }
-        #score-map-img {
-            max-width: 90%;
-            max-height: 60vh;
-            border: 3px solid #f1c40f;
+        
+        .score-input-container {
+            background: #1e2633;
+            padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 300px;
         }
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+        }
+        .score-row input {
+            width: 80px;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: #0b0e14;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+
         #final-score-screen button {
             padding: 15px 30px;
             background: #2ecc71;
@@ -192,12 +214,14 @@
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
+            margin-top: 10px;
         }
+        #final-score-screen button:hover { background: #27ae60; }
     </style>
 </head>
 <body>
 
-    <div id="version-label"># Каркассон v3.0 (с картой)</div>
+    <div id="version-label"># Каркассон v3.1</div>
 
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
@@ -249,12 +273,23 @@
         <button onclick="closeMeepleModal()">Отмена</button>
     </div>
 
-    <!-- ЭКРАН ФИНАЛЬНОГО ПОДСЧЁТА -->
+    <!-- ЭКРАН ФИНАЛЬНОГО ПОДСЧЁТА (БЕЗ КАРТИНКИ) -->
     <div id="final-score-screen">
         <h2>Игра окончена!</h2>
-        <img id="score-map-img" src="map_1.jpg" alt="Карта подсчёта очков">
-        <p style="margin-bottom: 20px; color: #c9d1d9;">Подсчитайте очки на карте и введите итоговый результат.</p>
-        <button onclick="restartGame()">🔄 Играть снова</button>
+        <p style="margin-bottom: 20px; color: #c9d1d9; font-size: 14px;">Введите очки, которые вы насчитали на карте.</p>
+        
+        <div class="score-input-container">
+            <div class="score-row">
+                <span class="blue-name">Игрок 1 (Синие)</span>
+                <input type="number" id="final-score-1" value="0" min="0">
+            </div>
+            <div class="score-row">
+                <span class="red-name">Игрок 2 (Красные)</span>
+                <input type="number" id="final-score-2" value="0" min="0">
+            </div>
+        </div>
+
+        <button onclick="saveFinalScores()">💾 Сохранить и показать результат</button>
     </div>
 
     <script>
@@ -719,6 +754,13 @@
                 return;
             }
 
+            // ПРОВЕРКА: нельзя ставить фишку, если на объекте уже есть фишка соперника
+            if (isObjectOccupiedByOpponent(lastPlacedR, lastPlacedC, zone)) {
+                document.getElementById('status-text').innerText = "Сюда нельзя поставить фишку! Здесь уже есть фишка соперника.";
+                closeMeepleModal();
+                return;
+            }
+
             closeMeepleModal();
 
             carBoardData[lastPlacedR][lastPlacedC].meeple = {
@@ -732,6 +774,52 @@
             renderCarBoard();
             updateUI();
             endTurn();
+        }
+
+        // === ПРОВЕРКА: ЕСТЬ ЛИ ФИШКА СОПЕРНИКА НА ЭТОМ ОБЪЕКТЕ ===
+        function isObjectOccupiedByOpponent(r, c, zone) {
+            // Для простоты проверяем только соседние клетки, которые соединены с этой стороной
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            const zoneToDir = { 'top': -1, 'bottom': 1, 'left': -1, 'right': 1 };
+            const oppositeColor = currentPlayer === 'blue' ? 'red' : 'blue';
+            
+            // Проходим по всем клеткам на поле и смотрим, есть ли на них фишки соперника
+            for (let rr = 0; rr < BOARD_SIZE; rr++) {
+                for (let cc = 0; cc < BOARD_SIZE; cc++) {
+                    const tile = carBoardData[rr][cc];
+                    if (tile && tile.meeple && tile.meeple.color === oppositeColor) {
+                        // Если нашли фишку соперника, проверяем, соединены ли объекты
+                        // (Упрощенная проверка: если они на соседних клетках и стороны совпадают)
+                        for (let [dr, dc] of dirs) {
+                            let nr = rr + dr, nc = cc + dc;
+                            if (nr === r && nc === c) {
+                                // Соседняя клетка. Проверяем, соединены ли стороны
+                                const tileData = TILE_DATA[tile.imgIndex];
+                                const neighborData = TILE_DATA[carBoardData[r][c].imgIndex];
+                                if (!tileData || !neighborData) continue;
+                                
+                                const tileSides = getRotatedSides(tileData, tile.rotation);
+                                const neighborSides = getRotatedSides(neighborData, carBoardData[r][c].rotation);
+                                
+                                // Определяем, какая сторона у соседа смотрит на текущую клетку
+                                let neighborSide;
+                                if (dr === -1) neighborSide = 'bottom';
+                                if (dr === 1) neighborSide = 'top';
+                                if (dc === -1) neighborSide = 'right';
+                                if (dc === 1) neighborSide = 'left';
+                                
+                                // Если стороны совпадают и это тот же тип объекта (дорога/город)
+                                // И фишка соперника стоит на той стороне, куда мы хотим поставить
+                                // (упрощенно: если мы ставим на ту же сторону, что и сосед)
+                                if (tileSides[neighborSide] === neighborSides[zoneToDir[zone] || 'top']) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         function skipTurn() {
@@ -783,14 +871,28 @@
             }
         }
 
-        // === ЗАВЕРШЕНИЕ ИГРЫ И ПОКАЗ КАРТЫ ===
+        // === ЗАВЕРШЕНИЕ ИГРЫ (БЕЗ КАРТИНКИ) ===
         function endGame() {
             document.getElementById('final-score-screen').style.display = 'flex';
         }
 
-        function restartGame() {
+        function saveFinalScores() {
+            const score1 = parseInt(document.getElementById('final-score-1').value) || 0;
+            const score2 = parseInt(document.getElementById('final-score-2').value) || 0;
+            
+            bluePoints += score1;
+            redPoints += score2;
+            
+            updateUI();
+            
+            let resultText = "";
+            if (bluePoints > redPoints) resultText = "🏆 Победили Синие!";
+            else if (redPoints > bluePoints) resultText = "🏆 Победили Красные!";
+            else resultText = "🤝 Ничья!";
+            
+            alert(`Итоговый счёт:\nСиние: ${bluePoints}\nКрасные: ${redPoints}\n\n${resultText}`);
+            
             document.getElementById('final-score-screen').style.display = 'none';
-            initCarcassonne();
         }
 
         // Запуск
