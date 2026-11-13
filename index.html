@@ -3,19 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Шашки и Каркассон</title>
+    <title>Шашки Онлайн</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0e14; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 10px; overflow: hidden; }
         
-        /* Метка версии */
-        #version-label {
-            font-size: 12px;
-            color: #4facfe;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
+        #version-label { font-size: 12px; color: #4facfe; margin-bottom: 5px; font-weight: bold; }
 
         /* --- МЕНЮ --- */
         #menu-screen { display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 10; width: 100%; }
@@ -41,11 +35,10 @@
         .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top: 5px solid #4facfe; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- ИГРА (ШАШКИ) --- */
+        /* --- ИГРА --- */
         #game-screen { display: none; flex-direction: column; align-items: center; width: 100%; }
         .header { margin-bottom: 15px; text-align: center; height: 60px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; position: relative;}
         .header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
-        
         .header h1.white-color { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .header h1.black-color { background: linear-gradient(135deg, #ff007f 0%, #ff4b2b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
@@ -72,162 +65,11 @@
         .selected { border: 3px solid #ffffff !important; box-shadow: 0 0 10px #ffffff !important; transform: scale(1.1); z-index: 10;}
         .hint-piece { box-shadow: 0 0 15px #2ecc71, 0 0 25px #2ecc71 !important; border: 2px solid #2ecc71 !important; }
         .fade-out { opacity: 0; transform: scale(0); }
-        
-        /* --- КАРКАССОН --- */
-        #carcassonne-screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 600px; }
-        
-        .player-panel {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            background: #1e2633;
-            border-radius: 10px;
-            margin: 5px 0;
-            border: 2px solid transparent;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .player-panel.active { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
-        
-        .blue-name { color: #00f2fe; }
-        .red-name { color: #ff007f; }
-        
-        #controls-top { display: flex; flex-direction: column; align-items: center; width: 100%; margin: 10px 0; }
-        
-        #tile-preview { 
-            width: 90px; height: 90px; 
-            background: #1e2633; 
-            border: 3px solid #f1c40f; 
-            margin-bottom: 10px; 
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-        }
-        #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn:active { transform: scale(0.95); }
-        .btn-green { background: #2ecc71; }
-        .btn-orange { background: #e67e22; }
-        .btn-purple { background: #9b59b6; }
-        .btn-red { background: #e74c3c; display: none; }
-        
-        #status-text { margin: 10px 0; font-size: 16px; color: #c9d1d9; text-align: center; min-height: 24px; }
-        
-        #board-wrapper {
-            width: 100%;
-            height: 400px;
-            overflow: hidden;
-            background: #0f131a;
-            border-radius: 10px;
-            border: 1px solid #1e2633;
-            position: relative;
-            touch-action: none;
-            cursor: grab;
-        }
-        #board-wrapper:active { cursor: grabbing; }
-        
-        #carcassonne-board { 
-            display: grid; 
-            grid-template-columns: repeat(15, 40px); 
-            grid-template-rows: repeat(15, 40px); 
-            gap: 1px; 
-            background: #1e2633; 
-            padding: 5px; 
-            border-radius: 8px; 
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(1);
-            transform-origin: center;
-            transition: transform 0.1s;
-        }
-        
-        .car-cell { 
-            width: 40px; height: 40px; 
-            background: #131821; 
-            display: flex; align-items: center; justify-content: center; 
-            cursor: pointer;
-            position: relative;
-        }
-        .car-cell.center-highlight { background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3); }
-        
-        .tile-img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .meeple { 
-            width: 16px; height: 16px; 
-            border-radius: 50%; 
-            position: absolute; 
-            border: 2px solid white;
-            z-index: 10;
-        }
-        .meeple.red { background: #ff007f; }
-        .meeple.blue { background: #00f2fe; }
-        
-        /* Модальное окно для выбора места фишки */
-        #meeple-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            padding: 20px;
-        }
-        #meeple-modal h3 { color: #f1c40f; margin-bottom: 15px; font-size: 20px; text-align: center; }
-        
-        #meeple-tile-container {
-            position: relative;
-            width: 280px; height: 280px;
-            border: 3px solid #f1c40f;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #1e2633;
-        }
-        #meeple-tile-container img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .meeple-zone {
-            position: absolute;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: rgba(255,255,255,0.7);
-        }
-        .meeple-zone:hover { background: rgba(46, 204, 113, 0.5); color: white; }
-        
-        .zone-top { top: 0; left: 0; width: 100%; height: 35%; }
-        .zone-bottom { bottom: 0; left: 0; width: 100%; height: 35%; }
-        .zone-left { top: 35%; left: 0; width: 35%; height: 30%; }
-        .zone-right { top: 35%; right: 0; width: 35%; height: 30%; }
-        .zone-center { top: 40%; left: 40%; width: 20%; height: 20%; border-radius: 50%; background: rgba(255, 255, 255, 0.1); }
-        
-        #meeple-modal button {
-            margin-top: 20px;
-            padding: 12px 30px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
 
-    <!-- МЕТКА ВЕРСИИ -->
-    <div id="version-label"># Версия 1.1</div>
+    <div id="version-label"># Шашки v2.0</div>
 
     <!-- МЕНЮ -->
     <div id="menu-screen">
@@ -250,7 +92,7 @@
         <button class="menu-btn btn-hard" onclick="tg.close()" style="margin-top: 20px; width: 200px;">Закрыть</button>
     </div>
 
-    <!-- ШАШКИ -->
+    <!-- ИГРА -->
     <div id="game-screen">
         <div class="header">
             <h1 id="player-name">Шашки Арена 🏆</h1>
@@ -260,56 +102,6 @@
         <div class="board-container" id="board-container">
             <div class="board" id="game-board"></div>
         </div>
-    </div>
-
-    <!-- КАРКАССОН -->
-    <div id="carcassonne-screen">
-        <div class="player-panel" id="player1-panel">
-            <span class="blue-name">👤 Игрок 1 (Синие)</span>
-            <span style="font-size: 18px;"><span id="player1-meeples">🧙‍♂️ 7</span></span>
-        </div>
-        <div style="font-size: 14px; color: #f1c40f; margin-bottom: 5px;">Очки: <span id="player1-score">0</span></div>
-
-        <div id="controls-top">
-            <div id="tile-preview"></div>
-            <div class="btn-row">
-                <button class="btn" onclick="drawTile()">Взять тайл</button>
-                <button class="btn btn-green" onclick="rotateTile()">Повернуть</button>
-            </div>
-            <div class="btn-row" style="margin-top: 10px;">
-                <button class="btn btn-orange" onclick="skipTurn()">Пропустить</button>
-                <button class="btn btn-purple" id="btn-meeple" onclick="startMeeplePlacement()">Поставить фишку</button>
-            </div>
-            <div class="btn-row" style="margin-top: 10px;">
-                <button class="btn btn-red" id="btn-replace" onclick="replaceTile()">🔄 Поменять</button>
-            </div>
-        </div>
-        
-        <div id="status-text">Нажми "Взять тайл"</div>
-        
-        <div id="board-wrapper">
-            <div id="carcassonne-board"></div>
-        </div>
-
-        <div class="player-panel" id="player2-panel">
-            <span class="red-name">👤 Игрок 2 (Красные)</span>
-            <span style="font-size: 18px;"><span id="player2-meeples">🧙‍♂️ 7</span></span>
-        </div>
-        <div style="font-size: 14px; color: #f1c40f; margin-top: 5px;">Очки: <span id="player2-score">0</span></div>
-    </div>
-
-    <!-- МОДАЛЬНЫЕ ОКНА -->
-    <div id="meeple-modal">
-        <h3>Куда поставить фишку?</h3>
-        <div id="meeple-tile-container">
-            <img id="meeple-tile-img" src="">
-            <div class="meeple-zone zone-top" onclick="placeMeeple('top')">⬆️</div>
-            <div class="meeple-zone zone-bottom" onclick="placeMeeple('bottom')">⬇️</div>
-            <div class="meeple-zone zone-left" onclick="placeMeeple('left')">⬅️</div>
-            <div class="meeple-zone zone-right" onclick="placeMeeple('right')">➡️</div>
-            <div class="meeple-zone zone-center" onclick="placeMeeple('center')">⛪</div>
-        </div>
-        <button onclick="closeMeepleModal()">Отмена</button>
     </div>
 
     <!-- КОНЕЦ ИГРЫ -->
@@ -325,8 +117,6 @@
         const SERVER_URL = "https://similarly-discount-viability.ngrok-free.dev";
         
         const urlParams = new URLSearchParams(window.location.search);
-        const gameType = urlParams.get('game');
-        const gameMode = urlParams.get('mode');
         const roomId = urlParams.get('room');
         const myColor = urlParams.get('color');
         
@@ -362,537 +152,6 @@
         let timeLeft = TURN_TIME;
         let isAnimating = false;
 
-        // ==========================================
-        // БАЗА ДАННЫХ ТАЙЛОВ
-        // ==========================================
-        const TILE_DATA = {
-            1: { left: "R", top: "F", right: "R", bottom: "F" },
-            2: { left: "R", top: "F", right: "R", bottom: "F" },
-            3: { left: "R", top: "F", right: "R", bottom: "F" },
-            4: { left: "R", top: "F", right: "R", bottom: "F" },
-            5: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            6: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            7: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            8: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            9: { left: "F", top: "R", right: "F", bottom: "F", center: "M" },
-            10: { left: "R", top: "F", right: "R", bottom: "C" },
-            11: { left: "R", top: "F", right: "R", bottom: "C" },
-            12: { left: "R", top: "F", right: "F", bottom: "F", center: "M" },
-            13: { left: "F", top: "F", right: "F", bottom: "C" },
-            14: { left: "F", top: "F", right: "F", bottom: "C" },
-            15: { left: "F", top: "C", right: "F", bottom: "F" },
-            16: { left: "F", top: "C", right: "F", bottom: "C" },
-            17: { left: "F", top: "C", right: "F", bottom: "C" },
-            18: { left: "F", top: "F", right: "F", bottom: "C" },
-            19: { left: "F", top: "C", right: "F", bottom: "C" },
-            20: { left: "F", top: "C", right: "F", bottom: "C" },
-            21: { left: "C", top: "C", right: "R", bottom: "R", crest: true },
-            22: { left: "R", top: "C", right: "C", bottom: "R", crest: true },
-            23: { left: "C", top: "C", right: "R", bottom: "R" },
-            24: { left: "R", top: "C", right: "C", bottom: "R" },
-            25: { left: "F", top: "R", right: "R", bottom: "C" },
-            26: { left: "F", top: "R", right: "R", bottom: "C" },
-            27: { left: "R", top: "R", right: "F", bottom: "C" },
-            28: { left: "R", top: "R", right: "F", bottom: "C" },
-            29: { left: "F", top: "C", right: "C", bottom: "C", crest: true },
-            30: { left: "C", top: "C", right: "F", bottom: "C" },
-            31: { left: "F", top: "C", right: "C", bottom: "C" },
-            32: { left: "C", top: "C", right: "F", bottom: "C" },
-            33: { left: "R", top: "C", right: "R", bottom: "R" },
-            34: { left: "R", top: "C", right: "C", bottom: "R" },
-            35: { left: "C", top: "C", right: "F", bottom: "F", crest: true },
-            36: { left: "F", top: "C", right: "C", bottom: "F" },
-            37: { left: "F", top: "R", right: "R", bottom: "F" },
-            38: { left: "R", top: "R", right: "C", bottom: "R" },
-            39: { left: "C", top: "F", right: "C", bottom: "F", crest: true },
-            40: { left: "C", top: "F", right: "F", bottom: "C" },
-            41: { left: "F", top: "F", right: "C", bottom: "C", crest: true },
-            42: { left: "C", top: "R", right: "C", bottom: "C", crest: true },
-            43: { left: "C", top: "F", right: "C", bottom: "F" },
-            44: { left: "C", top: "C", right: "C", bottom: "C", crest: true },
-            45: { left: "C", top: "C", right: "C", bottom: "R", crest: true },
-            46: { left: "C", top: "C", right: "F", bottom: "F" },
-            47: { left: "C", top: "C", right: "F", bottom: "F" },
-            48: { left: "F", top: "F", right: "C", bottom: "C" },
-            49: { left: "F", top: "F", right: "F", bottom: "W" },
-            50: { left: "F", top: "F", right: "F", bottom: "W" },
-            51: { left: "F", top: "F", right: "R", bottom: "R" },
-            52: { left: "R", top: "R", right: "F", bottom: "R" },
-            53: { left: "R", top: "W", right: "C", bottom: "W" },
-            54: { left: "C", top: "W", right: "C", bottom: "W" },
-            55: { left: "C", top: "R", right: "R", bottom: "R" },
-            56: { left: "R", top: "R", right: "F", bottom: "R" },
-            57: { left: "F", top: "W", right: "W", bottom: "F" },
-            58: { left: "W", top: "W", right: "F", bottom: "W" },
-            59: { left: "F", top: "R", right: "R", bottom: "F" },
-            60: { left: "R", top: "R", right: "F", bottom: "R" },
-            61: { left: "F", top: "F", right: "W", bottom: "W" },
-            62: { left: "W", top: "W", right: "R", bottom: "R" },
-            63: { left: "R", top: "F", right: "R", bottom: "F" },
-            64: { left: "R", top: "R", right: "R", bottom: "F" },
-            65: { left: "C", top: "W", right: "W", bottom: "C", crest: true },
-            66: { left: "W", top: "R", right: "W", bottom: "R" },
-            67: { left: "W", top: "F", right: "W", bottom: "F", center: "M" },
-            68: { left: "W", top: "F", right: "C", bottom: "F" },
-            69: { left: "C", top: "C", right: "F", bottom: "C" },
-            70: { left: "F", top: "R", right: "R", bottom: "F" },
-            71: { left: "R", top: "F", right: "F", bottom: "R" },
-            72: { left: "F", top: "F", right: "R", bottom: "R" },
-            73: { left: "C", top: "F", right: "R", bottom: "F" },
-            74: { left: "R", top: "C", right: "R", bottom: "C", crest: true },
-            75: { left: "R", top: "R", right: "F", bottom: "R" },
-            76: { left: "F", top: "C", right: "R", bottom: "C" },
-            77: { left: "F", top: "F", right: "C", bottom: "F" },
-            78: { left: "C", top: "C", right: "F", bottom: "C", crest: true },
-            79: { left: "F", top: "R", right: "F", bottom: "R", center: "M" },
-            80: { left: "F", top: "C", right: "F", bottom: "C" },
-            81: { left: "C", top: "F", right: "C", bottom: "C" },
-            82: { left: "C", top: "C", right: "F", bottom: "R" },
-            83: { left: "F", top: "R", right: "F", bottom: "R" },
-            84: { left: "F", top: "C", right: "C", bottom: "F" },
-            85: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            86: { left: "C", top: "R", right: "R", bottom: "C", crest: true },
-            87: { left: "R", top: "R", right: "R", bottom: "R" },
-            88: { left: "R", top: "F", right: "C", bottom: "C" },
-            89: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            90: { left: "C", top: "C", right: "C", bottom: "C" },
-            91: { left: "C", top: "R", right: "C", bottom: "R" },
-            92: { left: "C", top: "C", right: "R", bottom: "R" },
-            93: { left: "C", top: "C", right: "R", bottom: "F" },
-            94: { left: "R", top: "C", right: "F", bottom: "R" },
-            95: { left: "F", top: "R", right: "R", bottom: "F" },
-            96: { left: "R", top: "R", right: "R", bottom: "R" },
-            97: { left: "C", top: "F", right: "R", bottom: "R" },
-            98: { left: "R", top: "F", right: "R", bottom: "F" },
-            99: { left: "R", top: "F", right: "C", bottom: "R" },
-            100: { left: "C", top: "C", right: "R", bottom: "C" },
-            101: { left: "F", top: "R", right: "F", bottom: "R" },
-            102: { left: "F", top: "F", right: "C", bottom: "F" },
-            103: { left: "C", top: "R", right: "F", bottom: "R" },
-            104: { left: "F", top: "C", right: "F", bottom: "C", crest: true },
-            105: { left: "F", top: "R", right: "R", bottom: "F" },
-            106: { left: "R", top: "F", right: "R", bottom: "F" },
-            107: { left: "R", top: "R", right: "R", bottom: "R" },
-            108: { left: "R", top: "C", right: "R", bottom: "F" }
-        };
-
-        const BOARD_SIZE = 15;
-        const TILE_FOLDER = ""; 
-        const TOTAL_TILES = 108;
-        const FILE_EXTENSION = ".jpg";
-        const CAR_TURN_TIME = 180;
-
-        let carBoardData = [];
-        let currentTileIndex = null;
-        let currentRotation = 0;
-        let currentPlayer = 'blue'; 
-        
-        let blueMeeples = 7;
-        let redMeeples = 7;
-        let bluePoints = 0;
-        let redPoints = 0;
-        
-        let lastPlacedR = -1;
-        let lastPlacedC = -1;
-        
-        let scale = 1;
-        let panX = 0;
-        let panY = 0;
-        let isDragging = false;
-        let startX = 0, startY = 0;
-        let initialPinchDistance = null;
-
-        const carBoardElement = document.getElementById('carcassonne-board');
-        const wrapper = document.getElementById('board-wrapper');
-
-        function initCarcassonne() {
-            document.getElementById('carcassonne-screen').style.display = 'flex';
-            menuScreen.style.display = 'none';
-            waitingScreen.style.display = 'none';
-            gameScreen.style.display = 'none';
-            gameOverScreen.style.display = 'none';
-
-            carBoardElement.innerHTML = '';
-            carBoardData = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'car-cell';
-                    cell.dataset.row = r;
-                    cell.dataset.col = c;
-                    cell.addEventListener('click', () => onCarCellClick(r, c));
-                    carBoardElement.appendChild(cell);
-                }
-            }
-            
-            const center = Math.floor(BOARD_SIZE / 2);
-            const centerCell = document.querySelector(`.car-cell[data-row="${center}"][data-col="${center}"]`);
-            if (centerCell) centerCell.classList.add('center-highlight');
-
-            updateUI();
-            updateBoardTransform();
-            addPanListeners();
-            addPinchListeners();
-            document.getElementById('status-text').innerText = "Игра началась! Ход Синих.";
-        }
-
-        function updateUI() {
-            document.getElementById('player1-meeples').innerText = `🧙‍♂️ ${blueMeeples}`;
-            document.getElementById('player2-meeples').innerText = `🧙‍♂️ ${redMeeples}`;
-            document.getElementById('player1-score').innerText = bluePoints;
-            document.getElementById('player2-score').innerText = redPoints;
-            
-            const p1Panel = document.getElementById('player1-panel');
-            const p2Panel = document.getElementById('player2-panel');
-            
-            if (currentPlayer === 'blue') {
-                p1Panel.classList.add('active');
-                p2Panel.classList.remove('active');
-                document.getElementById('btn-meeple').style.display = blueMeeples > 0 ? 'block' : 'none';
-            } else {
-                p2Panel.classList.add('active');
-                p1Panel.classList.remove('active');
-                document.getElementById('btn-meeple').style.display = redMeeples > 0 ? 'block' : 'none';
-            }
-        }
-
-        // === ЛОГИКА ПЕРЕМЕЩЕНИЯ КАРТЫ ===
-        function updateBoardTransform() {
-            carBoardElement.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${scale})`;
-        }
-
-        function addPanListeners() {
-            wrapper.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.car-cell')) return;
-                isDragging = true;
-                startX = e.clientX - panX;
-                startY = e.clientY - panY;
-            });
-
-            wrapper.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                panX = e.clientX - startX;
-                panY = e.clientY - startY;
-                updateBoardTransform();
-            });
-
-            wrapper.addEventListener('mouseup', () => { isDragging = false; });
-            wrapper.addEventListener('mouseleave', () => { isDragging = false; });
-
-            wrapper.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    if (e.target.closest('.car-cell')) return;
-                    isDragging = true;
-                    startX = e.touches[0].clientX - panX;
-                    startY = e.touches[0].clientY - panY;
-                }
-            });
-
-            wrapper.addEventListener('touchmove', (e) => {
-                if (isDragging && e.touches.length === 1) {
-                    e.preventDefault();
-                    panX = e.touches[0].clientX - startX;
-                    panY = e.touches[0].clientY - startY;
-                    updateBoardTransform();
-                }
-            });
-
-            wrapper.addEventListener('touchend', () => { isDragging = false; });
-        }
-
-        function addPinchListeners() {
-            wrapper.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 2) {
-                    initialPinchDistance = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                }
-            });
-
-            wrapper.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 2 && initialPinchDistance) {
-                    e.preventDefault();
-                    const currentDistance = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    const factor = currentDistance / initialPinchDistance;
-                    scale *= factor;
-                    if (scale < 0.5) scale = 0.5;
-                    if (scale > 5) scale = 5;
-                    initialPinchDistance = currentDistance;
-                    updateBoardTransform();
-                }
-            });
-
-            wrapper.addEventListener('touchend', (e) => {
-                if (e.touches.length < 2) {
-                    initialPinchDistance = null;
-                }
-            });
-        }
-
-        // === ИГРОВАЯ ЛОГИКА ===
-        function drawTile() {
-            if (currentTileIndex !== null) {
-                document.getElementById('status-text').innerText = "Сначала поставьте текущий тайл!";
-                return;
-            }
-            currentTileIndex = Math.floor(Math.random() * TOTAL_TILES) + 1;
-            currentRotation = 0;
-            updatePreview();
-            
-            checkIfTileCanBePlaced();
-        }
-
-        function checkIfTileCanBePlaced() {
-            if (currentTileIndex === null) return;
-            
-            const tileData = TILE_DATA[currentTileIndex];
-            if (!tileData) return;
-
-            let canPlace = false;
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (carBoardData[r][c] !== null) continue;
-                    
-                    for (let rot = 0; rot < 360; rot += 90) {
-                        if (isValidPlacement(r, c, currentTileIndex, rot)) {
-                            canPlace = true;
-                            break;
-                        }
-                    }
-                    if (canPlace) break;
-                }
-                if (canPlace) break;
-            }
-
-            document.getElementById('btn-replace').style.display = canPlace ? 'none' : 'block';
-            if (!canPlace) {
-                document.getElementById('status-text').innerText = "Этот тайл никуда не подходит! Нажмите 'Поменять'.";
-            } else {
-                document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}.`;
-            }
-        }
-
-        function isValidPlacement(r, c, tileIndex, rotation) {
-            const tileData = TILE_DATA[tileIndex];
-            if (!tileData) return false;
-
-            const isFirstMove = carBoardData.flat().every(cell => cell === null);
-            if (isFirstMove) {
-                const center = Math.floor(BOARD_SIZE / 2);
-                return r === center && c === center;
-            }
-
-            const rotatedSides = getRotatedSides(tileData, rotation);
-            let hasNeighbor = false;
-            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-            for (let [dr, dc] of dirs) {
-                let nr = r + dr, nc = c + dc;
-                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-                if (carBoardData[nr][nc] === null) continue;
-
-                hasNeighbor = true;
-                const neighborData = carBoardData[nr][nc];
-                const neighborTile = TILE_DATA[neighborData.imgIndex];
-                if (!neighborTile) continue;
-                
-                const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
-
-                let currentSide, neighborSide;
-                if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
-                if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
-                if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
-                if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
-
-                if (rotatedSides[currentSide] !== neighborSides[neighborSide]) {
-                    return false;
-                }
-            }
-            return hasNeighbor;
-        }
-
-        function rotateTile() {
-            if (currentTileIndex === null) return;
-            currentRotation = (currentRotation + 90) % 360;
-            updatePreview();
-            checkIfTileCanBePlaced();
-        }
-
-        function replaceTile() {
-            if (currentTileIndex === null) return;
-            currentTileIndex = null;
-            currentRotation = 0;
-            updatePreview();
-            document.getElementById('btn-replace').style.display = 'none';
-            document.getElementById('status-text').innerText = "Тайл сброшен. Возьмите новый.";
-            drawTile();
-        }
-
-        function updatePreview() {
-            const preview = document.getElementById('tile-preview');
-            if (currentTileIndex === null) {
-                preview.innerHTML = '';
-                return;
-            }
-            const img = document.createElement('img');
-            img.src = `${TILE_FOLDER}tile_${currentTileIndex}${FILE_EXTENSION}`;
-            img.style.transform = `rotate(${currentRotation}deg)`;
-            preview.innerHTML = '';
-            preview.appendChild(img);
-        }
-
-        function getRotatedSides(tile, rotation) {
-            let sides = { ...tile };
-            if (rotation === 90) {
-                sides = { top: tile.left, right: tile.top, bottom: tile.right, left: tile.bottom };
-            } else if (rotation === 180) {
-                sides = { top: tile.bottom, right: tile.left, bottom: tile.top, left: tile.right };
-            } else if (rotation === 270) {
-                sides = { top: tile.right, right: tile.bottom, bottom: tile.left, left: tile.top };
-            }
-            return sides;
-        }
-
-        function onCarCellClick(r, c) {
-            if (currentTileIndex === null) return;
-            if (carBoardData[r][c] !== null) return;
-
-            if (!isValidPlacement(r, c, currentTileIndex, currentRotation)) {
-                document.getElementById('status-text').innerText = "Нельзя ставить здесь!";
-                return;
-            }
-
-            carBoardData[r][c] = {
-                imgIndex: currentTileIndex,
-                rotation: currentRotation,
-                meeple: null
-            };
-
-            lastPlacedR = r;
-            lastPlacedC = c;
-
-            renderCarBoard();
-            currentTileIndex = null;
-            currentRotation = 0;
-            updatePreview();
-            document.getElementById('btn-replace').style.display = 'none';
-            
-            document.getElementById('status-text').innerText = `Тайл установлен! Ход ${currentPlayer === 'blue' ? 'Синих' : 'Красных'}.`;
-        }
-
-        function startMeeplePlacement() {
-            if (lastPlacedR === -1 || lastPlacedC === -1) return;
-            if (carBoardData[lastPlacedR][lastPlacedC].meeple) return;
-            
-            const tileData = carBoardData[lastPlacedR][lastPlacedC];
-            const img = document.getElementById('meeple-tile-img');
-            img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
-            img.style.transform = `rotate(${tileData.rotation}deg)`;
-            
-            document.getElementById('meeple-modal').style.display = 'flex';
-        }
-
-        function closeMeepleModal() {
-            document.getElementById('meeple-modal').style.display = 'none';
-        }
-
-        function placeMeeple(zone) {
-            if (lastPlacedR === -1 || lastPlacedC === -1) return;
-            
-            const tileData = TILE_DATA[carBoardData[lastPlacedR][lastPlacedC].imgIndex];
-            const rotatedSides = getRotatedSides(tileData, carBoardData[lastPlacedR][lastPlacedC].rotation);
-            
-            let isValidZone = false;
-            if (zone === 'center') {
-                if (tileData.center === 'M') isValidZone = true;
-            } else if (zone === 'top') {
-                if (rotatedSides.top === 'R' || rotatedSides.top === 'C') isValidZone = true;
-            } else if (zone === 'bottom') {
-                if (rotatedSides.bottom === 'R' || rotatedSides.bottom === 'C') isValidZone = true;
-            } else if (zone === 'left') {
-                if (rotatedSides.left === 'R' || rotatedSides.left === 'C') isValidZone = true;
-            } else if (zone === 'right') {
-                if (rotatedSides.right === 'R' || rotatedSides.right === 'C') isValidZone = true;
-            }
-
-            if (!isValidZone) {
-                document.getElementById('status-text').innerText = "Сюда нельзя ставить фишку (только трава/река)!";
-                closeMeepleModal();
-                return;
-            }
-
-            closeMeepleModal();
-
-            carBoardData[lastPlacedR][lastPlacedC].meeple = {
-                color: currentPlayer,
-                zone: zone
-            };
-            
-            if (currentPlayer === 'blue') blueMeeples--;
-            else redMeeples--;
-            
-            renderCarBoard();
-            updateUI();
-            endTurn();
-        }
-
-        function skipTurn() {
-            if (currentTileIndex !== null) {
-                document.getElementById('status-text').innerText = "Сначала поставьте тайл!";
-                return;
-            }
-            endTurn();
-        }
-
-        function endTurn() {
-            // В Каркассоне нет проигрыша! Просто передаем ход.
-            currentPlayer = currentPlayer === 'blue' ? 'red' : 'blue';
-            updateUI();
-            document.getElementById('status-text').innerText = `Ход ${currentPlayer === 'blue' ? 'Синих' : 'Красных'}.`;
-        }
-
-        function renderCarBoard() {
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    const cell = document.querySelector(`.car-cell[data-row="${r}"][data-col="${c}"]`);
-                    cell.innerHTML = '';
-                    if (carBoardData[r][c] !== null) {
-                        const tileData = carBoardData[r][c];
-                        const img = document.createElement('img');
-                        img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
-                        img.className = 'tile-img';
-                        img.style.transform = `rotate(${tileData.rotation}deg)`;
-                        cell.appendChild(img);
-                        
-                        if (tileData.meeple) {
-                            const meeple = document.createElement('div');
-                            meeple.className = `meeple ${tileData.meeple.color}`;
-                            
-                            if (tileData.meeple.zone === 'top') meeple.style.top = '5px';
-                            else if (tileData.meeple.zone === 'bottom') meeple.style.bottom = '5px';
-                            else if (tileData.meeple.zone === 'left') meeple.style.left = '5px';
-                            else if (tileData.meeple.zone === 'right') meeple.style.right = '5px';
-                            else if (tileData.meeple.zone === 'center') {
-                                meeple.style.top = '50%';
-                                meeple.style.left = '50%';
-                                meeple.style.transform = 'translate(-50%, -50%)';
-                            }
-                            
-                            cell.appendChild(meeple);
-                        }
-                    }
-                }
-            }
-        }
-
-        // ==========================================
-        // ЛОГИКА ШАШЕК
-        // ==========================================
         try {
             if (tg.initDataUnsafe?.user?.first_name) {
                 nameElement.innerText = `${tg.initDataUnsafe.user.first_name} 👑`;
@@ -909,59 +168,55 @@
             myPlayerId = tg.initDataUnsafe?.user?.id || (myColor === 'white' ? 111 : 222);
         } catch (e) { myPlayerId = 111; }
 
-        if (gameType === 'carcassonne') {
-            initCarcassonne();
-        } else {
-            if (isOnlineMode) {
-                menuScreen.style.display = 'none';
-                waitingScreen.style.display = 'flex';
-                timerDisplay.style.display = 'block';
-                
-                async function fetchState() {
-                    if (isGameOver || isSendingMove) return;
-                    try {
-                        const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
-                            headers: { "ngrok-skip-browser-warning": "true" }
-                        });
-                        if (!res.ok) { waitingTitle.innerText = "Ошибка " + res.status; return; }
-                        const data = await res.json();
-                        if (data.error) { waitingTitle.innerText = "Ошибка данных"; return; }
-                        
-                        onlineBoard = data.board;
-                        onlineTurn = data.turn;
-                        isPlayerTurn = (onlineTurn === 'white' && myColor === 'white') || (onlineTurn === 'black' && myColor === 'black');
+        if (isOnlineMode) {
+            menuScreen.style.display = 'none';
+            waitingScreen.style.display = 'flex';
+            timerDisplay.style.display = 'block';
+            
+            async function fetchState() {
+                if (isGameOver || isSendingMove) return;
+                try {
+                    const res = await fetch(`${SERVER_URL}/api/state?room=${roomId}`, {
+                        headers: { "ngrok-skip-browser-warning": "true" }
+                    });
+                    if (!res.ok) { waitingTitle.innerText = "Ошибка " + res.status; return; }
+                    const data = await res.json();
+                    if (data.error) { waitingTitle.innerText = "Ошибка данных"; return; }
+                    
+                    onlineBoard = data.board;
+                    onlineTurn = data.turn;
+                    isPlayerTurn = (onlineTurn === 'white' && myColor === 'white') || (onlineTurn === 'black' && myColor === 'black');
 
-                        if (waitingScreen.style.display !== 'none') {
-                            waitingScreen.style.display = 'none';
-                            gameScreen.style.display = 'flex';
-                            initOnlineBoard();
-                        } else {
-                            if (!isAnimating) updateOnlineBoard(); 
-                        }
-                        statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
-                        
-                        if (data.winner && !isGameOver) {
-                            isGameOver = true;
-                            if (data.winner === myColor) showGameOver("Ты победил! 🏆", true);
-                            else showGameOver("Ты проиграл! 🤖", false);
-                            return;
-                        }
-
-                        if (isPlayerTurn && !turnTimer) startTimer();
-                        else if (!isPlayerTurn && turnTimer) {
-                            clearInterval(turnTimer); turnTimer = null; timerDisplay.innerText = "00:00";
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        waitingTitle.innerText = "Ошибка сети!";
+                    if (waitingScreen.style.display !== 'none') {
+                        waitingScreen.style.display = 'none';
+                        gameScreen.style.display = 'flex';
+                        initOnlineBoard();
+                    } else {
+                        if (!isAnimating) updateOnlineBoard(); 
                     }
+                    statusElement.innerText = isPlayerTurn ? "Твой ход!" : "Ход соперника...";
+                    
+                    if (data.winner && !isGameOver) {
+                        isGameOver = true;
+                        if (data.winner === myColor) showGameOver("Ты победил! 🏆", true);
+                        else showGameOver("Ты проиграл! 🤖", false);
+                        return;
+                    }
+
+                    if (isPlayerTurn && !turnTimer) startTimer();
+                    else if (!isPlayerTurn && turnTimer) {
+                        clearInterval(turnTimer); turnTimer = null; timerDisplay.innerText = "00:00";
+                    }
+                } catch (e) {
+                    console.error(e);
+                    waitingTitle.innerText = "Ошибка сети!";
                 }
-                fetchState();
-                setInterval(fetchState, 1000);
-            } else {
-                menuScreen.style.display = 'flex';
-                timerDisplay.style.display = 'none';
             }
+            fetchState();
+            setInterval(fetchState, 1000);
+        } else {
+            menuScreen.style.display = 'flex';
+            timerDisplay.style.display = 'none';
         }
 
         function startTimer() {
