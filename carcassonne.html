@@ -190,11 +190,11 @@
 
         #log-panel {
             width: 100%;
-            max-height: 100px;
+            max-height: 90px;
             overflow-y: auto;
             background: #131821;
             border-radius: 8px;
-            padding: 8px;
+            padding: 6px;
             margin-top: 8px;
             font-size: 12px;
             color: #8b949e;
@@ -205,7 +205,7 @@
 </head>
 <body>
 
-    <div id="version-label"># Каркассон v4.0 (полные правила)</div>
+    <div id="version-label"># Каркассон v4.1 (исходные стороны + корректный подсчёт)</div>
 
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
@@ -275,8 +275,9 @@
         const TILE_FOLDER = "";
         const FILE_EXTENSION = ".jpg";
 
-        // Расширенная структура: farmGroups (какие края-поля — одна ферма),
-        // cityFarmAdj (какие города граничат с какими полями)
+        // СТОРОНЫ — точно как в исходном файле, без изменений.
+        // farmGroups/cityFarmAdj — в "каноническом" виде (для rotation=0).
+        // При повороте преобразуются единой функцией rotateSide.
         const TILE_DATA = {
             1:  { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
             2:  { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
@@ -387,7 +388,7 @@
         const logPanel = document.getElementById('log-panel');
 
         // ==========================================
-        // DSU (Union-Find) для объектов
+        // DSU
         // ==========================================
         class DSU {
             constructor() { this.parent = {}; }
@@ -402,15 +403,16 @@
             }
         }
 
-        const dsu = new DSU();          // для городов и дорог
-        const farmDsu = new DSU();      // для ферм
-        let allSegments = new Set();    // все сегменты городов/дорог
-        let allFarmSegments = new Set();// все сегменты ферм
-        let finishedCityRoots = new Set(); // корни завершённых городов (для подсчёта ферм)
-        let cityFarmLinks = [];         // [{cityRoot, farmRoot}] — связи город-ферма
+        const dsu = new DSU();          // города/дороги
+        const farmDsu = new DSU();      // фермы
+        const allSegments = new Set();  // сегменты городов/дорог: "r,c,side"
+        const allFarmSegments = new Set(); // "farm:r,c,side"
+        const finishedCityRoots = new Set(); // уже посчитанные города (чтобы не считать дважды)
+        const cityFarmLinks = [];       // [{cityRoot, farmRoot}] — для финального подсчёта ферм
 
         const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
         const DIR = { top: [-1, 0], bottom: [1, 0], left: [0, -1], right: [0, 1] };
+        const SIDE_ORDER = ['top', 'right', 'bottom', 'left'];
 
         function segKey(r, c, side) { return `${r},${c},${side}`; }
         function farmSegKey(r, c, side) { return `farm:${r},${c},${side}`; }
@@ -419,7 +421,59 @@
             const d = document.createElement('div');
             d.textContent = msg;
             logPanel.prepend(d);
-            while (logPanel.children.length > 30) logPanel.removeChild(logPanel.lastChild);
+            while (logPanel.children.length > 25) logPanel.removeChild(logPanel.lastChild);
+        }
+
+        // ==========================================
+        // ПОВОРОТ
+        // ==========================================
+        // Повернуть сторону на rotation (0/90/180/270) ПО часовой стрелке.
+        // top -> right -> bottom -> left -> top
+        function rotateSide(side, rotation) {
+            const steps = ((rotation / 90) % 4 + 4) % 4;
+            const idx = SIDE_ORDER.indexOf(side);
+            if (idx < 0) return side;
+            return SIDE_ORDER[(idx + steps) % 4];
+        }
+
+        // Получить стороны тайла с учётом поворота.
+        // Берём исходные стороны и для каждой физической стороны тайла
+        // определяем, какая исходная сторона "смотрит" в эту сторону.
+        function getRotatedSides(tileData, rotation) {
+            const steps = ((rotation / 90) % 4 + 4) % 4;
+            const result = {};
+            for (const physicalSide of SIDE_ORDER) {
+                // Физическая сторона после поворота соответствует исходной стороне
+                // на steps назад по часовой стрелке
+                const sourceIdx = (SIDE_ORDER.indexOf(physicalSide) - steps + 4) % 4;
+                const sourceSide = SIDE_ORDER[sourceIdx];
+                result[physicalSide] = tileData[sourceSide];
+            }
+            return result;
+        }
+
+        function getRotatedFarmGroups(tileData, rotation) {
+            if (!tileData.farmGroups) return [];
+            const steps = ((rotation / 90) % 4 + 4) % 4;
+            return tileData.farmGroups.map(group =>
+                group.map(side => {
+                    const idx = SIDE_ORDER.indexOf(side);
+                    return SIDE_ORDER[(idx + steps) % 4];
+                })
+            );
+        }
+
+        function getRotatedCityFarmAdj(tileData, rotation) {
+            if (!tileData.cityFarmAdj) return [];
+            const steps = ((rotation / 90) % 4 + 4) % 4;
+            return tileData.cityFarmAdj.map(([cs, fs]) => {
+                const ci = SIDE_ORDER.indexOf(cs);
+                const fi = SIDE_ORDER.indexOf(fs);
+                return [
+                    SIDE_ORDER[(ci + steps) % 4],
+                    SIDE_ORDER[(fi + steps) % 4]
+                ];
+            });
         }
 
         // ==========================================
@@ -435,7 +489,7 @@
                     cell.className = 'car-cell';
                     cell.dataset.row = r;
                     cell.dataset.col = c;
-                    cell.addEventListener('click', (e) => {
+                    cell.addEventListener('click', () => {
                         if (dragMoved) return;
                         onCarCellClick(r, c);
                     });
@@ -475,7 +529,7 @@
         }
 
         // ==========================================
-        // ПЕРЕМЕЩЕНИЕ / ЗУМ КАРТЫ
+        // ПЕРЕМЕЩЕНИЕ / ЗУМ
         // ==========================================
         function updateBoardTransform() {
             carBoardElement.style.transform =
@@ -489,9 +543,9 @@
             });
             wrapper.addEventListener('mousemove', (e) => {
                 if (!isDragging) return;
-                const newPanX = e.clientX - startX, newPanY = e.clientY - startY;
-                if (Math.abs(newPanX - panX) > 3 || Math.abs(newPanY - panY) > 3) dragMoved = true;
-                panX = newPanX; panY = newPanY;
+                const nx = e.clientX - startX, ny = e.clientY - startY;
+                if (Math.abs(nx - panX) > 3 || Math.abs(ny - panY) > 3) dragMoved = true;
+                panX = nx; panY = ny;
                 updateBoardTransform();
             });
             wrapper.addEventListener('mouseup', () => { isDragging = false; });
@@ -508,10 +562,10 @@
             wrapper.addEventListener('touchmove', (e) => {
                 if (isDragging && e.touches.length === 1) {
                     e.preventDefault();
-                    const newPanX = e.touches[0].clientX - startX;
-                    const newPanY = e.touches[0].clientY - startY;
-                    if (Math.abs(newPanX - panX) > 3 || Math.abs(newPanY - panY) > 3) dragMoved = true;
-                    panX = newPanX; panY = newPanY;
+                    const nx = e.touches[0].clientX - startX;
+                    const ny = e.touches[0].clientY - startY;
+                    if (Math.abs(nx - panX) > 3 || Math.abs(ny - panY) > 3) dragMoved = true;
+                    panX = nx; panY = ny;
                     updateBoardTransform();
                 }
             }, { passive: false });
@@ -532,14 +586,14 @@
             wrapper.addEventListener('touchmove', (e) => {
                 if (e.touches.length === 2 && initialPinchDistance) {
                     e.preventDefault();
-                    const currentDistance = Math.hypot(
+                    const cur = Math.hypot(
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
                     );
-                    scale *= currentDistance / initialPinchDistance;
+                    scale *= cur / initialPinchDistance;
                     if (scale < 0.5) scale = 0.5;
                     if (scale > 5) scale = 5;
-                    initialPinchDistance = currentDistance;
+                    initialPinchDistance = cur;
                     updateBoardTransform();
                 }
             }, { passive: false });
@@ -550,48 +604,7 @@
         }
 
         // ==========================================
-        // ПОВОРОТ СТОРОН
-        // ==========================================
-        function rotateSide(side, rotation) {
-            if (rotation === 0) return side;
-            const order = ['top', 'right', 'bottom', 'left'];
-            const idx = order.indexOf(side);
-            const shift = rotation / 90;
-            return order[(idx + shift) % 4];
-        }
-
-        function getRotatedSides(tile, rotation) {
-            return {
-                top: tile[rotateSide('top', (4 - rotation/90) % 4)],
-                right: tile[rotateSide('right', (4 - rotation/90) % 4)],
-                bottom: tile[rotateSide('bottom', (4 - rotation/90) % 4)],
-                left: tile[rotateSide('left', (4 - rotation/90) % 4)]
-            };
-        }
-
-        // Поворот farmGroups: каждая группа — массив сторон
-        function getRotatedFarmGroups(tile, rotation) {
-            if (!tile.farmGroups) return [];
-            const shift = rotation / 90;
-            const order = ['top', 'right', 'bottom', 'left'];
-            return tile.farmGroups.map(group =>
-                group.map(side => order[(order.indexOf(side) + shift) % 4])
-            );
-        }
-
-        // Поворот cityFarmAdj: пары [citySide, farmSide]
-        function getRotatedCityFarmAdj(tile, rotation) {
-            if (!tile.cityFarmAdj) return [];
-            const shift = rotation / 90;
-            const order = ['top', 'right', 'bottom', 'left'];
-            return tile.cityFarmAdj.map(([cs, fs]) => [
-                order[(order.indexOf(cs) + shift) % 4],
-                order[(order.indexOf(fs) + shift) % 4]
-            ]);
-        }
-
-        // ==========================================
-        // ИГРОВАЯ ЛОГИКА — ТАЙЛЫ
+        // ТАЙЛЫ
         // ==========================================
         function drawTile() {
             if (currentTileIndex !== null) {
@@ -606,25 +619,19 @@
 
         function checkIfTileCanBePlaced() {
             if (currentTileIndex === null) return;
-
             let canPlace = false;
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let r = 0; r < BOARD_SIZE && !canPlace; r++) {
+                for (let c = 0; c < BOARD_SIZE && !canPlace; c++) {
                     if (carBoardData[r][c] !== null) continue;
                     for (let rot = 0; rot < 360; rot += 90) {
                         if (isValidPlacement(r, c, currentTileIndex, rot)) { canPlace = true; break; }
                     }
-                    if (canPlace) break;
                 }
-                if (canPlace) break;
             }
-
             document.getElementById('btn-replace').style.display = canPlace ? 'none' : 'block';
-            if (!canPlace) {
-                document.getElementById('status-text').innerText = "Этот тайл никуда не подходит! Нажмите 'Поменять'.";
-            } else {
-                document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}.`;
-            }
+            document.getElementById('status-text').innerText = canPlace
+                ? `Вытянут тайл #${currentTileIndex}.`
+                : "Этот тайл никуда не подходит! Нажмите 'Поменять'.";
         }
 
         function isValidPlacement(r, c, tileIndex, rotation) {
@@ -639,26 +646,17 @@
 
             const rotatedSides = getRotatedSides(tileData, rotation);
             let hasNeighbor = false;
-            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
-            for (let [dr, dc] of dirs) {
-                let nr = r + dr, nc = c + dc;
+            for (const side of SIDE_ORDER) {
+                const [dr, dc] = DIR[side];
+                const nr = r + dr, nc = c + dc;
                 if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-                if (carBoardData[nr][nc] === null) continue;
+                const neighbor = carBoardData[nr][nc];
+                if (!neighbor) continue;
 
                 hasNeighbor = true;
-                const neighborData = carBoardData[nr][nc];
-                const neighborTile = TILE_DATA[neighborData.imgIndex];
-                if (!neighborTile) continue;
-                const neighborSides = getRotatedSides(neighborTile, neighborData.rotation);
-
-                let currentSide, neighborSide;
-                if (dr === -1) { currentSide = 'top'; neighborSide = 'bottom'; }
-                if (dr === 1) { currentSide = 'bottom'; neighborSide = 'top'; }
-                if (dc === -1) { currentSide = 'left'; neighborSide = 'right'; }
-                if (dc === 1) { currentSide = 'right'; neighborSide = 'left'; }
-
-                if (rotatedSides[currentSide] !== neighborSides[neighborSide]) return false;
+                const nSides = getRotatedSides(TILE_DATA[neighbor.imgIndex], neighbor.rotation);
+                if (rotatedSides[side] !== nSides[OPPOSITE[side]]) return false;
             }
             return hasNeighbor;
         }
@@ -722,14 +720,14 @@
         }
 
         // ==========================================
-        // DSU: РЕГИСТРАЦИЯ СЕГМЕНТОВ (город/дорога)
+        // РЕГИСТРАЦИЯ СЕГМЕНТОВ (город/дорога)
         // ==========================================
         function registerTileSegments(r, c) {
             const tile = carBoardData[r][c];
             const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
 
-            tile.segments = tile.segments || {};
-            for (const side of ['top', 'bottom', 'left', 'right']) {
+            tile.segments = {};
+            for (const side of SIDE_ORDER) {
                 const type = sides[side];
                 if (type === 'R' || type === 'C') {
                     const key = segKey(r, c, side);
@@ -739,7 +737,7 @@
                 }
             }
 
-            for (const side of ['top', 'bottom', 'left', 'right']) {
+            for (const side of SIDE_ORDER) {
                 const type = sides[side];
                 if (type !== 'R' && type !== 'C') continue;
                 const [dr, dc] = DIR[side];
@@ -755,15 +753,16 @@
         }
 
         // ==========================================
-        // DSU: РЕГИСТРАЦИЯ ФЕРМ
+        // РЕГИСТРАЦИЯ ФЕРМ
         // ==========================================
         function registerTileFarms(r, c) {
             const tile = carBoardData[r][c];
             const tileData = TILE_DATA[tile.imgIndex];
             const groups = getRotatedFarmGroups(tileData, tile.rotation);
 
-            // Для каждой группы полей создаём сегменты и объединяем их
             tile.farmGroups = groups;
+            tile.cityFarmAdj = getRotatedCityFarmAdj(tileData, tile.rotation);
+
             for (const group of groups) {
                 let prevKey = null;
                 for (const side of group) {
@@ -775,9 +774,8 @@
                 }
             }
 
-            // Соединяем с соседями по краям-полям
             const sides = getRotatedSides(tileData, tile.rotation);
-            for (const side of ['top', 'bottom', 'left', 'right']) {
+            for (const side of SIDE_ORDER) {
                 if (sides[side] !== 'F') continue;
                 const [dr, dc] = DIR[side];
                 const nr = r + dr, nc = c + dc;
@@ -789,35 +787,42 @@
                     farmDsu.union(farmSegKey(r, c, side), farmSegKey(nr, nc, OPPOSITE[side]));
                 }
             }
-
-            // Записываем связи город-ферма
-            const adj = getRotatedCityFarmAdj(tileData, tile.rotation);
-            tile.cityFarmAdj = adj;
         }
 
         // ==========================================
-        // ПРОВЕРКА ЗАВЕРШЁННОСТИ
+        // ОБЪЕКТЫ: сегменты, завершённость, владелец
         // ==========================================
         function getObjectSegments(root, type) {
             const result = [];
             for (const seg of allSegments) {
                 if (dsu.find(seg) !== root) continue;
-                const parts = seg.split(',');
-                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
-                const tile = carBoardData[rr][cc];
-                if (!tile) continue;
-                const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
+                const p = seg.split(',');
+                const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
+                const t = carBoardData[rr][cc];
+                if (!t) continue;
+                const sides = getRotatedSides(TILE_DATA[t.imgIndex], t.rotation);
                 if (sides[side] === type) result.push(seg);
             }
             return result;
         }
 
+        // Уникальные тайлы в объекте
+        function getObjectTiles(segments) {
+            const tiles = new Set();
+            for (const seg of segments) {
+                const p = seg.split(',');
+                tiles.add(`${p[0]},${p[1]}`);
+            }
+            return tiles;
+        }
+
         function isObjectComplete(segments, type) {
             for (const seg of segments) {
-                const parts = seg.split(',');
-                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                const p = seg.split(',');
+                const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
                 const tile = carBoardData[rr][cc];
                 if (!tile) return false;
+
                 const [dr, dc] = DIR[side];
                 const nr = rr + dr, nc = cc + dc;
                 if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) return false;
@@ -829,19 +834,20 @@
             return true;
         }
 
+        // Владелец объекта: больше всего фишек в этом объекте в нужных зонах
         function getOwner(segments) {
             const counts = { blue: 0, red: 0 };
             const seen = new Set();
             for (const seg of segments) {
-                const parts = seg.split(',');
-                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                const p = seg.split(',');
+                const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
                 const key = `${rr},${cc},${side}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                const tile = carBoardData[rr][cc];
-                if (!tile || !tile.meeple) continue;
-                if (tile.meeple.zone !== side) continue;
-                counts[tile.meeple.color] += 1;
+                const t = carBoardData[rr][cc];
+                if (!t || !t.meeple) continue;
+                if (t.meeple.zone !== side) continue;
+                counts[t.meeple.color] += 1;
             }
             if (counts.blue > counts.red) return 'blue';
             if (counts.red > counts.blue) return 'red';
@@ -851,22 +857,22 @@
         function returnMeeples(segments) {
             const seen = new Set();
             for (const seg of segments) {
-                const parts = seg.split(',');
-                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                const p = seg.split(',');
+                const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
                 const key = `${rr},${cc},${side}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                const tile = carBoardData[rr][cc];
-                if (!tile || !tile.meeple) continue;
-                if (tile.meeple.zone !== side) continue;
-                if (tile.meeple.color === 'blue') blueMeeples++;
+                const t = carBoardData[rr][cc];
+                if (!t || !t.meeple) continue;
+                if (t.meeple.zone !== side) continue;
+                if (t.meeple.color === 'blue') blueMeeples++;
                 else redMeeples++;
-                tile.meeple = null;
+                t.meeple = null;
             }
         }
 
         // ==========================================
-        // АВТОМАТИЧЕСКИЙ ПОДСЧЁТ ПРИ ЗАВЕРШЕНИИ
+        // АВТОПОДСЧЁТ ПОСЛЕ УСТАНОВКИ ТАЙЛА
         // ==========================================
         function updateScoresAfterPlacement(r, c) {
             const tile = carBoardData[r][c];
@@ -876,34 +882,35 @@
             const cityRoots = new Set();
             const roadRoots = new Set();
             for (const side in tile.segments) {
-                const t = sides[side];
                 const root = dsu.find(segKey(r, c, side));
-                if (t === 'C') cityRoots.add(root);
-                else if (t === 'R') roadRoots.add(root);
+                if (sides[side] === 'C') cityRoots.add(root);
+                else roadRoots.add(root);
             }
 
             // ГОРОДА
             for (const root of cityRoots) {
                 if (finishedCityRoots.has(root)) continue;
-                const segments = getObjectSegments(root, 'C');
-                if (segments.length === 0) continue;
-                if (!isObjectComplete(segments, 'C')) continue;
+                const segs = getObjectSegments(root, 'C');
+                if (segs.length === 0) continue;
+                if (!isObjectComplete(segs, 'C')) continue;
 
                 finishedCityRoots.add(root);
-                const owner = getOwner(segments);
-                let pts = segments.length * 2;
-                for (const seg of segments) {
-                    const p = seg.split(',');
-                    const t = carBoardData[parseInt(p[0])][parseInt(p[1])];
-                    if (TILE_DATA[t.imgIndex].crest) pts += 2;
+                const tiles = getObjectTiles(segs);
+                let pts = tiles.size * 2;
+                let crests = 0;
+                for (const key of tiles) {
+                    const [rr, cc] = key.split(',').map(Number);
+                    const t = carBoardData[rr][cc];
+                    if (TILE_DATA[t.imgIndex].crest) { crests++; pts += 2; }
                 }
+                const owner = getOwner(segs);
                 if (owner === 'blue') bluePoints += pts;
                 if (owner === 'red') redPoints += pts;
-                addLog(`🏰 Город завершён! ${owner ? (owner==='blue'?'Синие':'Красные') : 'ничейный'} +${pts} очк.`);
-                returnMeeples(segments);
+                addLog(`🏰 Город завершён: ${tiles.size} тайл(ов), ${crests} щит(ов) → +${pts} ${owner || '—'}`);
+                returnMeeples(segs);
 
-                // Связываем город с прилегающими фермами для финального подсчёта
-                for (const seg of segments) {
+                // Связь город → фермы
+                for (const seg of segs) {
                     const p = seg.split(',');
                     const rr = parseInt(p[0]), cc = parseInt(p[1]), cs = p[2];
                     const t = carBoardData[rr][cc];
@@ -920,27 +927,26 @@
 
             // ДОРОГИ
             for (const root of roadRoots) {
-                const segments = getObjectSegments(root, 'R');
-                if (segments.length === 0) continue;
-                if (!isObjectComplete(segments, 'R')) continue;
+                const segs = getObjectSegments(root, 'R');
+                if (segs.length === 0) continue;
+                if (!isObjectComplete(segs, 'R')) continue;
 
-                const owner = getOwner(segments);
-                const pts = segments.length;
+                const tiles = getObjectTiles(segs);
+                const pts = tiles.size;
+                const owner = getOwner(segs);
                 if (owner === 'blue') bluePoints += pts;
                 if (owner === 'red') redPoints += pts;
-                addLog(`🛣️ Дорога завершена! ${owner ? (owner==='blue'?'Синие':'Красные') : 'ничейная'} +${pts} очк.`);
-                returnMeeples(segments);
+                addLog(`🛣️ Дорога завершена: ${tiles.size} тайл(ов) → +${pts} ${owner || '—'}`);
+                returnMeeples(segs);
             }
 
             // МОНАСТЫРЬ
-            if (TILE_DATA[tile.imgIndex].center === 'M') {
-                if (isMonasteryComplete(r, c)) {
-                    if (tile.meeple && tile.meeple.zone === 'center') {
-                        if (tile.meeple.color === 'blue') { bluePoints += 9; blueMeeples++; }
-                        else { redPoints += 9; redMeeples++; }
-                        tile.meeple = null;
-                        addLog(`⛪ Монастырь завершён! +9 очк.`);
-                    }
+            if (TILE_DATA[tile.imgIndex].center === 'M' && isMonasteryComplete(r, c)) {
+                if (tile.meeple && tile.meeple.zone === 'center') {
+                    if (tile.meeple.color === 'blue') { bluePoints += 9; blueMeeples++; }
+                    else { redPoints += 9; redMeeples++; }
+                    tile.meeple = null;
+                    addLog(`⛪ Монастырь завершён → +9`);
                 }
             }
 
@@ -960,7 +966,7 @@
         }
 
         // ==========================================
-        // РАЗМЕЩЕНИЕ ФИШКИ
+        // ФИШКИ
         // ==========================================
         function startMeeplePlacement() {
             if (lastPlacedR === -1 || lastPlacedC === -1) return;
@@ -998,11 +1004,13 @@
                 return;
             }
 
-            // Проверка: чужая фишка на том же объекте
             const opponent = currentPlayer === 'blue' ? 'red' : 'blue';
+
             if (zone !== 'center') {
                 const type = rotatedSides[zone];
+
                 if (type === 'F') {
+                    // Проверка фермы
                     const fkey = farmSegKey(lastPlacedR, lastPlacedC, zone);
                     if (farmDsu.parent[fkey] !== undefined) {
                         const root = farmDsu.find(fkey);
@@ -1012,23 +1020,24 @@
                             const rr = parseInt(p[1]), cc = parseInt(p[2]), side = p[3];
                             const t = carBoardData[rr][cc];
                             if (t && t.meeple && t.meeple.color === opponent && t.meeple.zone === side) {
-                                document.getElementById('status-text').innerText = "Здесь уже есть фишка соперника на этой ферме.";
+                                document.getElementById('status-text').innerText = "На этой ферме уже есть фишка соперника.";
                                 closeMeepleModal();
                                 return;
                             }
                         }
                     }
                 } else {
+                    // Город или дорога
                     const seg = segKey(lastPlacedR, lastPlacedC, zone);
                     if (dsu.parent[seg] !== undefined) {
                         const root = dsu.find(seg);
-                        const segments = getObjectSegments(root, type);
-                        for (const s of segments) {
+                        const segs = getObjectSegments(root, type);
+                        for (const s of segs) {
                             const p = s.split(',');
                             const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
                             const t = carBoardData[rr][cc];
                             if (t && t.meeple && t.meeple.color === opponent && t.meeple.zone === side) {
-                                document.getElementById('status-text').innerText = "Здесь уже есть фишка соперника на этом объекте.";
+                                document.getElementById('status-text').innerText = "На этом объекте уже есть фишка соперника.";
                                 closeMeepleModal();
                                 return;
                             }
@@ -1064,7 +1073,7 @@
         }
 
         // ==========================================
-        // РЕНДЕР ДОСКИ
+        // РЕНДЕР
         // ==========================================
         function renderCarBoard() {
             for (let r = 0; r < BOARD_SIZE; r++) {
@@ -1108,17 +1117,17 @@
             for (const root of roots) {
                 const citySegs = getObjectSegments(root, 'C');
                 if (citySegs.length > 0 && !isObjectComplete(citySegs, 'C')) {
-                    const owner = getOwner(citySegs);
-                    let pts = citySegs.length;
-                    for (const seg of citySegs) {
-                        const p = seg.split(',');
-                        const t = carBoardData[parseInt(p[0])][parseInt(p[1])];
+                    const tiles = getObjectTiles(citySegs);
+                    let pts = tiles.size;
+                    for (const key of tiles) {
+                        const [rr, cc] = key.split(',').map(Number);
+                        const t = carBoardData[rr][cc];
                         if (TILE_DATA[t.imgIndex].crest) pts += 1;
                     }
+                    const owner = getOwner(citySegs);
                     if (owner === 'blue') bluePoints += pts;
                     if (owner === 'red') redPoints += pts;
 
-                    // Связь с фермами
                     for (const seg of citySegs) {
                         const p = seg.split(',');
                         const rr = parseInt(p[0]), cc = parseInt(p[1]), cs = p[2];
@@ -1136,13 +1145,14 @@
 
                 const roadSegs = getObjectSegments(root, 'R');
                 if (roadSegs.length > 0 && !isObjectComplete(roadSegs, 'R')) {
+                    const tiles = getObjectTiles(roadSegs);
                     const owner = getOwner(roadSegs);
-                    if (owner === 'blue') bluePoints += roadSegs.length;
-                    if (owner === 'red') redPoints += roadSegs.length;
+                    if (owner === 'blue') bluePoints += tiles.size;
+                    if (owner === 'red') redPoints += tiles.size;
                 }
             }
 
-            // 2. Монастыри (незавершённые)
+            // 2. Монастыри (все, что ещё с фишкой)
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const tile = carBoardData[r][c];
@@ -1150,42 +1160,38 @@
                     if (TILE_DATA[tile.imgIndex].center !== 'M') continue;
                     if (!tile.meeple || tile.meeple.zone !== 'center') continue;
 
-                    let neighbors = 0;
+                    let nb = 0;
                     for (let dr = -1; dr <= 1; dr++) {
                         for (let dc = -1; dc <= 1; dc++) {
                             if (dr === 0 && dc === 0) continue;
                             const nr = r + dr, nc = c + dc;
-                            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && carBoardData[nr][nc]) neighbors++;
+                            if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && carBoardData[nr][nc]) nb++;
                         }
                     }
-                    const pts = 1 + neighbors;
+                    const pts = 1 + nb;
                     if (tile.meeple.color === 'blue') { bluePoints += pts; blueMeeples++; }
                     else { redPoints += pts; redMeeples++; }
                     tile.meeple = null;
                 }
             }
 
-            // 3. ФЕРМЫ (только в конце игры)
-            // Подсчитываем: для каждой фермы — сколько завершённых городов к ней прилегает
-            // Учитываем и завершённые в игре, и завершённые "финально" (незавершённые города тоже дают 3 очка? НЕТ — по правилам только завершённые)
-            // Официально: ферма даёт 3 очка за каждый завершённый город, к которому она прилегает.
-            // Незавершённые города не считаются.
-            const farmCityCount = {}; // farmRoot -> Set of cityRoots (завершённые)
+            // 3. Фермы
+            // Считаем для каждой фермы: сколько РАЗНЫХ завершённых городов её касается.
+            const farmCities = {}; // farmRoot -> Set(cityRoot)
             for (const link of cityFarmLinks) {
-                if (!finishedCityRoots.has(link.cityRoot)) continue; // только завершённые в игре
-                if (!farmCityCount[link.farmRoot]) farmCityCount[link.farmRoot] = new Set();
-                farmCityCount[link.farmRoot].add(link.cityRoot);
+                if (!finishedCityRoots.has(link.cityRoot)) continue;
+                if (!farmCities[link.farmRoot]) farmCities[link.farmRoot] = new Set();
+                farmCities[link.farmRoot].add(link.cityRoot);
             }
 
-            // Собираем все уникальные корни ферм
             const farmRoots = new Set();
             for (const seg of allFarmSegments) farmRoots.add(farmDsu.find(seg));
 
             for (const farmRoot of farmRoots) {
-                const cities = farmCityCount[farmRoot] ? farmCityCount[farmRoot].size : 0;
+                const cities = farmCities[farmRoot] ? farmCities[farmRoot].size : 0;
                 if (cities === 0) continue;
 
-                // Владелец фермы — по большинству крестьян
+                // Крестьяне
                 const counts = { blue: 0, red: 0 };
                 const seen = new Set();
                 for (const seg of allFarmSegments) {
@@ -1196,15 +1202,13 @@
                     if (seen.has(key)) continue;
                     seen.add(key);
                     const t = carBoardData[rr][cc];
-                    if (t && t.meeple && t.meeple.zone === side) {
-                        counts[t.meeple.color] += 1;
-                    }
+                    if (t && t.meeple && t.meeple.zone === side) counts[t.meeple.color] += 1;
                 }
+
                 const pts = cities * 3;
-                if (counts.blue > counts.red && pts > 0) bluePoints += pts;
-                else if (counts.red > counts.blue && pts > 0) redPoints += pts;
-                else if (counts.blue > 0 && counts.blue === counts.red && pts > 0) {
-                    // ничья — по правилам оба получают полные очки
+                if (counts.blue > counts.red) bluePoints += pts;
+                else if (counts.red > counts.blue) redPoints += pts;
+                else if (counts.blue > 0 && counts.blue === counts.red) {
                     bluePoints += pts;
                     redPoints += pts;
                 }
@@ -1218,14 +1222,12 @@
             else if (redPoints > bluePoints) resultText = "🏆 Победили Красные!";
             else resultText = "🤝 Ничья!";
 
-            const content = document.getElementById('final-score-content');
-            content.innerHTML = `
+            document.getElementById('final-score-content').innerHTML = `
                 <div class="score-line blue-name">Синие: ${bluePoints}</div>
                 <div class="score-line red-name">Красные: ${redPoints}</div>
                 <div class="score-line" style="margin-top:20px;">${resultText}</div>
             `;
             document.getElementById('final-score-screen').style.display = 'flex';
-            addLog(`🏁 Игра окончена. Синие: ${bluePoints}, Красные: ${redPoints}`);
         }
 
         function closeFinalScreen() {
