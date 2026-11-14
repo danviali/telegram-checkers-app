@@ -294,7 +294,8 @@
         // НАСТРОЙКИ
         // ==========================================
         const BOARD_SIZE = 15;
-        const TILE_FOLDER = "tiles/";
+        // ИЗМЕНЕНО: убрали папку, так как картинки лежат в корне рядом с html
+        const TILE_FOLDER = "";
         const FILE_EXTENSION = ".jpg";
 
         // Стороны — исходные. farmGroups/cityFarmAdj — для rotation=0.
@@ -411,7 +412,6 @@
         // ==========================================
         // ПОСТРОЕНИЕ КАРТИНКИ (с fallback)
         // ==========================================
-        // Возвращает HTML-элемент: <img> с onerror, который заменяется на fallback-блок
         function buildTileVisual(tileIndex, rotation, extraClass, fallbackFontSize) {
             const img = document.createElement('img');
             img.src = `${TILE_FOLDER}tile_${tileIndex}${FILE_EXTENSION}`;
@@ -1037,7 +1037,6 @@
 
             const tileData = carBoardData[lastPlacedR][lastPlacedC];
 
-            // Рисуем картинку или fallback в контейнере модалки
             const visualContainer = document.getElementById('meeple-tile-visual');
             visualContainer.innerHTML = '';
             const visual = buildTileVisual(tileData.imgIndex, tileData.rotation, '', '60px');
