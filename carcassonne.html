@@ -42,8 +42,15 @@
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
+            position: relative;
         }
         #tile-preview img { width: 100%; height: 100%; object-fit: cover; }
+        #tile-preview .fallback-preview {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; font-weight: bold; color: #0b0e14;
+            background: linear-gradient(135deg, #f1c40f, #e67e22);
+        }
 
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         .btn { padding: 10px 15px; background: #4facfe; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
@@ -91,10 +98,19 @@
             display: flex; align-items: center; justify-content: center;
             cursor: pointer;
             position: relative;
+            overflow: hidden;
         }
         .car-cell.center-highlight { background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.3); }
 
-        .tile-img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .tile-img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block; }
+
+        .tile-fallback {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold; color: #0b0e14;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            pointer-events: none;
+        }
 
         .meeple {
             width: 16px; height: 16px;
@@ -106,7 +122,6 @@
         }
         .meeple.red { background: #ff007f; }
         .meeple.blue { background: #00f2fe; }
-        /* Фермеры — «лёжа» (небольшой овал) */
         .meeple.farmer {
             width: 18px; height: 10px;
             border-radius: 8px;
@@ -134,7 +149,8 @@
             overflow: hidden;
             background: #1e2633;
         }
-        #meeple-tile-container img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        #meeple-tile-container img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block; }
+        #meeple-tile-container .tile-fallback { font-size: 60px; }
 
         .meeple-zone {
             position: absolute;
@@ -210,7 +226,7 @@
 </head>
 <body>
 
-    <div id="version-label"># Каркассон v5.0 (полные правила)</div>
+    <div id="version-label"># Каркассон v5.1 (с отображением картинок)</div>
 
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
@@ -253,7 +269,8 @@
     <div id="meeple-modal">
         <h3>Куда поставить фишку?</h3>
         <div id="meeple-tile-container">
-            <img id="meeple-tile-img" src="">
+            <!-- Сюда динамически вставляется картинка или fallback -->
+            <div id="meeple-tile-visual" style="width:100%;height:100%;"></div>
             <div class="meeple-zone zone-top" onclick="placeMeeple('top')">⬆️</div>
             <div class="meeple-zone zone-bottom" onclick="placeMeeple('bottom')">⬇️</div>
             <div class="meeple-zone zone-left" onclick="placeMeeple('left')">⬅️</div>
@@ -390,6 +407,30 @@
         const carBoardElement = document.getElementById('carcassonne-board');
         const wrapper = document.getElementById('board-wrapper');
         const logPanel = document.getElementById('log-panel');
+
+        // ==========================================
+        // ПОСТРОЕНИЕ КАРТИНКИ (с fallback)
+        // ==========================================
+        // Возвращает HTML-элемент: <img> с onerror, который заменяется на fallback-блок
+        function buildTileVisual(tileIndex, rotation, extraClass, fallbackFontSize) {
+            const img = document.createElement('img');
+            img.src = `${TILE_FOLDER}tile_${tileIndex}${FILE_EXTENSION}`;
+            img.alt = `Тайл #${tileIndex}`;
+            img.title = `Тайл #${tileIndex}`;
+            if (extraClass) img.className = extraClass;
+            if (rotation) img.style.transform = `rotate(${rotation}deg)`;
+
+            img.onerror = function () {
+                const fb = document.createElement('div');
+                fb.className = 'tile-fallback';
+                fb.textContent = `${tileIndex}`;
+                if (fallbackFontSize) fb.style.fontSize = fallbackFontSize;
+                if (extraClass) fb.classList.add(extraClass);
+                if (rotation) fb.style.transform = `rotate(${rotation}deg)`;
+                if (img.parentNode) img.parentNode.replaceChild(fb, img);
+            };
+            return img;
+        }
 
         // ==========================================
         // DSU
@@ -671,12 +712,10 @@
 
         function updatePreview() {
             const preview = document.getElementById('tile-preview');
-            if (currentTileIndex === null) { preview.innerHTML = ''; return; }
-            const img = document.createElement('img');
-            img.src = `${TILE_FOLDER}tile_${currentTileIndex}${FILE_EXTENSION}`;
-            img.style.transform = `rotate(${currentRotation}deg)`;
             preview.innerHTML = '';
-            preview.appendChild(img);
+            if (currentTileIndex === null) return;
+            const visual = buildTileVisual(currentTileIndex, currentRotation, '', '26px');
+            preview.appendChild(visual);
         }
 
         function onCarCellClick(r, c) {
@@ -728,14 +767,11 @@
                 }
             }
 
-            // Соединяем сегменты, которые физически являются одной областью внутри тайла.
-            // У этих тайлов две отдельные части города, разделённые полем.
             const splitCityTiles = new Set([16, 17, 19, 20, 39, 43, 104]);
             const citySides = SIDE_ORDER.filter(side => sides[side] === 'C');
             const roadSides = SIDE_ORDER.filter(side => sides[side] === 'R');
             if (citySides.length > 1) {
                 if (splitCityTiles.has(tile.imgIndex)) {
-                    // У указанных тайлов городские сегменты попарно не соединены.
                     for (const side of citySides) dsu.find(segKey(r, c, side));
                 } else {
                     for (let i = 1; i < citySides.length; i++) {
@@ -743,7 +779,6 @@
                     }
                 }
             }
-            // Дорожные рукава сходятся в один дорожный объект на тайле.
             if (roadSides.length > 1) {
                 for (let i = 1; i < roadSides.length; i++) {
                     dsu.union(segKey(r, c, roadSides[0]), segKey(r, c, roadSides[i]));
@@ -826,7 +861,6 @@
             return tiles;
         }
 
-        // ГОРОД завершён: у каждого сегмента города сосед навстречу — город
         function isCityComplete(segments) {
             for (const seg of segments) {
                 const p = seg.split(',');
@@ -842,9 +876,6 @@
             return true;
         }
 
-        // ДОРОГА завершена: у каждого сегмента дороги
-        //   - сосед навстречу — дорога (продолжение),
-        //   - ИЛИ на тайле пометка roadEnd / crossing (закрыта с этой стороны)
         function isRoadComplete(segments) {
             for (const seg of segments) {
                 const p = seg.split(',');
@@ -865,7 +896,6 @@
             return true;
         }
 
-        // Владелец: больше всего фишек (в нужных зонах)
         function getOwner(segments) {
             const counts = { blue: 0, red: 0 };
             const seen = new Set();
@@ -886,8 +916,6 @@
             return null;
         }
 
-        // Вернуть фишки (только с указанных сегментов, только не фермеров — но фермеры сюда не попадают,
-        // т.к. мы вызываем для города/дороги)
         function returnMeeples(segments) {
             const seen = new Set();
             for (const seg of segments) {
@@ -899,7 +927,7 @@
                 const t = carBoardData[rr][cc];
                 if (!t || !t.meeple) continue;
                 if (t.meeple.zone !== side) continue;
-                if (t.meeple.isFarmer) continue; // страховка
+                if (t.meeple.isFarmer) continue;
                 if (t.meeple.color === 'blue') blueMeeples++;
                 else redMeeples++;
                 t.meeple = null;
@@ -922,7 +950,6 @@
                 else roadRoots.add(root);
             }
 
-            // ГОРОДА
             for (const root of cityRoots) {
                 if (finishedCityRoots.has(root)) continue;
                 const segs = getObjectSegments(root, 'C');
@@ -956,7 +983,6 @@
                 }
             }
 
-            // ДОРОГИ
             for (const root of roadRoots) {
                 if (finishedRoadRoots.has(root)) continue;
                 const segs = getObjectSegments(root, 'R');
@@ -973,7 +999,6 @@
                 returnMeeples(segs);
             }
 
-            // МОНАСТЫРИ: проверяем новый тайл и все монастыри вокруг него.
             for (let mr = Math.max(0, r - 1); mr <= Math.min(BOARD_SIZE - 1, r + 1); mr++) {
                 for (let mc = Math.max(0, c - 1); mc <= Math.min(BOARD_SIZE - 1, c + 1); mc++) {
                     const monastery = carBoardData[mr][mc];
@@ -1011,9 +1036,12 @@
             if (carBoardData[lastPlacedR][lastPlacedC].meeple) return;
 
             const tileData = carBoardData[lastPlacedR][lastPlacedC];
-            const img = document.getElementById('meeple-tile-img');
-            img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
-            img.style.transform = `rotate(${tileData.rotation}deg)`;
+
+            // Рисуем картинку или fallback в контейнере модалки
+            const visualContainer = document.getElementById('meeple-tile-visual');
+            visualContainer.innerHTML = '';
+            const visual = buildTileVisual(tileData.imgIndex, tileData.rotation, '', '60px');
+            visualContainer.appendChild(visual);
 
             document.getElementById('meeple-modal').style.display = 'flex';
         }
@@ -1048,7 +1076,6 @@
                 const type = rotatedSides[zone];
 
                 if (type === 'F') {
-                    // Ферма
                     const fkey = farmSegKey(lastPlacedR, lastPlacedC, zone);
                     if (farmDsu.parent[fkey] !== undefined) {
                         const root = farmDsu.find(fkey);
@@ -1065,7 +1092,6 @@
                         }
                     }
                 } else {
-                    // Город/дорога
                     const seg = segKey(lastPlacedR, lastPlacedC, zone);
                     if (dsu.parent[seg] !== undefined) {
                         const root = dsu.find(seg);
@@ -1126,11 +1152,8 @@
                     cell.innerHTML = '';
                     if (carBoardData[r][c] !== null) {
                         const tileData = carBoardData[r][c];
-                        const img = document.createElement('img');
-                        img.src = `${TILE_FOLDER}tile_${tileData.imgIndex}${FILE_EXTENSION}`;
-                        img.className = 'tile-img';
-                        img.style.transform = `rotate(${tileData.rotation}deg)`;
-                        cell.appendChild(img);
+                        const visual = buildTileVisual(tileData.imgIndex, tileData.rotation, 'tile-img', '14px');
+                        cell.appendChild(visual);
 
                         if (tileData.meeple) {
                             const meeple = document.createElement('div');
@@ -1161,7 +1184,7 @@
                 return;
             }
             gameOver = true;
-            // 1. Незавершённые города и дороги
+
             const roots = new Set();
             for (const seg of allSegments) roots.add(dsu.find(seg));
 
@@ -1201,7 +1224,6 @@
                 }
             }
 
-            // 2. Монастыри
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const tile = carBoardData[r][c];
@@ -1224,7 +1246,6 @@
                 }
             }
 
-            // 3. Фермы
             const farmCities = {};
             for (const link of cityFarmLinks) {
                 const cityRoot = dsu.find(link.cityRoot);
