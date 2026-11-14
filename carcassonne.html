@@ -191,7 +191,7 @@
 </head>
 <body>
 
-    <div id="version-label"># Каркассон v3.2 (авто-подсчёт)</div>
+    <div id="version-label"># Каркассон v3.3 (фикс фишек)</div>
 
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
@@ -389,7 +389,6 @@
         }
 
         const dsu = new DSU();
-        // Хранилище всех сегментов, когда-либо созданных (для финального подсчёта)
         let allSegments = new Set();
 
         const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
@@ -677,25 +676,23 @@
         }
 
         // ==========================================
-        // DSU: РЕГИСТРАЦИЯ СЕГМЕНТОВ И СОЕДИНЕНИЕ
+        // DSU: РЕГИСТРАЦИЯ СЕГМЕНТОВ
         // ==========================================
         function registerTileSegments(r, c) {
             const tile = carBoardData[r][c];
             const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
 
-            // Создаём сегменты для дорог и городов
+            tile.segments = tile.segments || {};
             for (const side of ['top', 'bottom', 'left', 'right']) {
                 const type = sides[side];
                 if (type === 'R' || type === 'C') {
                     const key = segKey(r, c, side);
                     dsu.find(key);
                     allSegments.add(key);
-                    tile.segments = tile.segments || {};
                     tile.segments[side] = type;
                 }
             }
 
-            // Соединяем с соседями
             for (const side of ['top', 'bottom', 'left', 'right']) {
                 const type = sides[side];
                 if (type !== 'R' && type !== 'C') continue;
@@ -711,34 +708,32 @@
             }
         }
 
-        // Собрать все сегменты объекта по корню
-        function getObjectSegments(root) {
+        // Собрать сегменты объекта по корню и ТИПУ
+        function getObjectSegments(root, type) {
             const result = [];
             for (const seg of allSegments) {
-                if (dsu.find(seg) === root) result.push(seg);
+                if (dsu.find(seg) !== root) continue;
+                const parts = seg.split(',');
+                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                const tile = carBoardData[rr][cc];
+                if (!tile) continue;
+                const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
+                if (sides[side] === type) result.push(seg);
             }
             return result;
         }
 
-        // Проверка завершённости объекта
-        function isObjectComplete(segments) {
+        // Завершённость объекта (по его сегментам и типу)
+        function isObjectComplete(segments, type) {
             for (const seg of segments) {
-                const [r, c, side] = seg.split(',');
-                const rr = parseInt(r), cc = parseInt(c);
+                const parts = seg.split(',');
+                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
                 const tile = carBoardData[rr][cc];
                 if (!tile) return false;
-                const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
-                const type = sides[side];
 
-                // Для каждого сегмента: все стороны того же типа на этом тайле
-                // должны быть соединены с соседями, ИЛИ это "закрытый" объект
-                // Упрощённая проверка: у сегмента не должно быть "открытого" соседа
                 const [dr, dc] = DIR[side];
                 const nr = rr + dr, nc = cc + dc;
-
-                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) {
-                    return false; // край доски = незавершён (для простоты)
-                }
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) return false;
                 const neighbor = carBoardData[nr][nc];
                 if (!neighbor) return false;
 
@@ -748,97 +743,99 @@
             return true;
         }
 
-        // Владелец объекта (по большинству фишек)
-        function getOwner(segments) {
+        // Владелец: только фишки этого объекта и в своей зоне
+        function getOwner(segments, type) {
             const counts = { blue: 0, red: 0 };
             const seen = new Set();
             for (const seg of segments) {
-                const [r, c] = seg.split(',');
-                const tile = carBoardData[parseInt(r)][parseInt(c)];
-                if (!tile || !tile.meeple) continue;
-                const m = tile.meeple;
-                const key = `${r},${c}`;
+                const parts = seg.split(',');
+                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                const key = `${rr},${cc},${side}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                // Учитываем фишку, только если она стоит в этом объекте
-                counts[m.color] += 1;
+
+                const tile = carBoardData[rr][cc];
+                if (!tile || !tile.meeple) continue;
+                if (tile.meeple.zone !== side) continue;
+                counts[tile.meeple.color] += 1;
             }
             if (counts.blue > counts.red) return 'blue';
             if (counts.red > counts.blue) return 'red';
             return null;
         }
 
-        // Возврат фишек владельцам, стоящих в этом объекте
-        function returnMeeples(segments) {
+        // Вернуть фишки, стоящие в этом объекте (только этой зоны)
+        function returnMeeples(segments, type) {
             const seen = new Set();
             for (const seg of segments) {
-                const [r, c] = seg.split(',');
-                const key = `${r},${c}`;
+                const parts = seg.split(',');
+                const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                const key = `${rr},${cc},${side}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
-                const tile = carBoardData[parseInt(r)][parseInt(c)];
-                if (tile && tile.meeple) {
-                    if (tile.meeple.color === 'blue') blueMeeples++;
-                    else redMeeples++;
-                    tile.meeple = null;
-                }
+
+                const tile = carBoardData[rr][cc];
+                if (!tile || !tile.meeple) continue;
+                if (tile.meeple.zone !== side) continue;
+
+                if (tile.meeple.color === 'blue') blueMeeples++;
+                else redMeeples++;
+                tile.meeple = null;
             }
         }
 
-        // Подсчёт очков для завершённых объектов после размещения тайла
+        // Очки после постановки тайла
         function updateScoresAfterPlacement(r, c) {
-            // Собираем корни всех сегментов, затронутых тайлом
-            const roots = new Set();
             const tile = carBoardData[r][c];
-            if (tile.segments) {
-                for (const side in tile.segments) {
-                    roots.add(dsu.find(segKey(r, c, side)));
-                }
+            if (!tile.segments) return;
+
+            const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
+
+            const cityRoots = new Set();
+            const roadRoots = new Set();
+            for (const side in tile.segments) {
+                const t = sides[side];
+                const root = dsu.find(segKey(r, c, side));
+                if (t === 'C') cityRoots.add(root);
+                else if (t === 'R') roadRoots.add(root);
             }
 
-            for (const root of roots) {
-                const segments = getObjectSegments(root);
+            for (const root of cityRoots) {
+                const segments = getObjectSegments(root, 'C');
                 if (segments.length === 0) continue;
-                const type = segments[0].split(',')[2];
-                const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
-                const segType = sides[type];
+                if (!isObjectComplete(segments, 'C')) continue;
 
-                if (!isObjectComplete(segments)) continue;
-
-                const owner = getOwner(segments);
-                const size = segments.length;
-
-                if (segType === 'C') {
-                    // Города: 2 очка за тайл + 2 за щит
-                    let pts = size * 2;
-                    for (const seg of segments) {
-                        const [rr, cc, side] = seg.split(',');
-                        const t = carBoardData[parseInt(rr)][parseInt(cc)];
-                        const td = TILE_DATA[t.imgIndex];
-                        if (td && td.crest) pts += 2;
-                    }
-                    if (owner === 'blue') bluePoints += pts;
-                    if (owner === 'red') redPoints += pts;
-                } else if (segType === 'R') {
-                    // Дорога: 1 очко за тайл
-                    const pts = size;
-                    if (owner === 'blue') bluePoints += pts;
-                    if (owner === 'red') redPoints += pts;
+                const owner = getOwner(segments, 'C');
+                let pts = segments.length * 2;
+                for (const seg of segments) {
+                    const p = seg.split(',');
+                    const t = carBoardData[parseInt(p[0])][parseInt(p[1])];
+                    if (TILE_DATA[t.imgIndex].crest) pts += 2;
                 }
-
-                returnMeeples(segments);
+                if (owner === 'blue') bluePoints += pts;
+                if (owner === 'red') redPoints += pts;
+                returnMeeples(segments, 'C');
             }
 
-            // Монастырь: проверяем завершённость
-            if (tile.center === 'M' || TILE_DATA[tile.imgIndex].center === 'M') {
+            for (const root of roadRoots) {
+                const segments = getObjectSegments(root, 'R');
+                if (segments.length === 0) continue;
+                if (!isObjectComplete(segments, 'R')) continue;
+
+                const owner = getOwner(segments, 'R');
+                const pts = segments.length;
+                if (owner === 'blue') bluePoints += pts;
+                if (owner === 'red') redPoints += pts;
+                returnMeeples(segments, 'R');
+            }
+
+            // Монастырь
+            if (TILE_DATA[tile.imgIndex].center === 'M') {
                 if (isMonasteryComplete(r, c)) {
-                    const ownerTile = carBoardData[r][c];
-                    if (ownerTile.meeple && ownerTile.meeple.zone === 'center') {
-                        if (ownerTile.meeple.color === 'blue') bluePoints += 9;
-                        else redPoints += 9;
-                        if (ownerTile.meeple.color === 'blue') blueMeeples++;
-                        else redMeeples++;
-                        ownerTile.meeple = null;
+                    if (tile.meeple && tile.meeple.zone === 'center') {
+                        if (tile.meeple.color === 'blue') { bluePoints += 9; blueMeeples++; }
+                        else { redPoints += 9; redMeeples++; }
+                        tile.meeple = null;
                     }
                 }
             }
@@ -896,21 +893,23 @@
                 return;
             }
 
-            // Проверка через DSU: есть ли чужая фишка в этом объекте
+            // Проверка: есть ли чужая фишка в этом объекте
             if (zone !== 'center') {
                 const seg = segKey(lastPlacedR, lastPlacedC, zone);
                 if (dsu.parent[seg] !== undefined) {
                     const root = dsu.find(seg);
-                    const segments = getObjectSegments(root);
+                    const type = rotatedSides[zone];
+                    const segments = getObjectSegments(root, type);
                     const opponent = currentPlayer === 'blue' ? 'red' : 'blue';
                     const seen = new Set();
                     for (const s of segments) {
-                        const [rr, cc] = s.split(',');
-                        const key = `${rr},${cc}`;
+                        const parts = s.split(',');
+                        const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
+                        const key = `${rr},${cc},${side}`;
                         if (seen.has(key)) continue;
                         seen.add(key);
-                        const t = carBoardData[parseInt(rr)][parseInt(cc)];
-                        if (t && t.meeple && t.meeple.color === opponent) {
+                        const t = carBoardData[rr][cc];
+                        if (t && t.meeple && t.meeple.color === opponent && t.meeple.zone === side) {
                             document.getElementById('status-text').innerText = "Сюда нельзя! Здесь уже есть фишка соперника.";
                             closeMeepleModal();
                             return;
@@ -987,42 +986,34 @@
         // ФИНАЛЬНЫЙ ПОДСЧЁТ
         // ==========================================
         function endGame() {
-            // Финальный подсчёт незавершённых объектов
             const roots = new Set();
             for (const seg of allSegments) roots.add(dsu.find(seg));
 
             for (const root of roots) {
-                const segments = getObjectSegments(root);
-                if (segments.length === 0) continue;
-                const segType = segments[0].split(',')[2];
-                const sides = getRotatedSides(TILE_DATA[carBoardData[parseInt(segments[0].split(',')[0])][parseInt(segments[0].split(',')[1])].imgIndex],
-                    carBoardData[parseInt(segments[0].split(',')[0])][parseInt(segments[0].split(',')[1])].rotation);
-                const type = sides[segType];
-                if (type !== 'C' && type !== 'R') continue;
-
-                // Пропускаем уже завершённые (они уже посчитаны)
-                if (isObjectComplete(segments)) continue;
-
-                const owner = getOwner(segments);
-                const size = segments.length;
-
-                if (type === 'C') {
-                    let pts = size * 1;
-                    for (const seg of segments) {
-                        const [rr, cc] = seg.split(',');
-                        const t = carBoardData[parseInt(rr)][parseInt(cc)];
-                        const td = TILE_DATA[t.imgIndex];
-                        if (td && td.crest) pts += 1;
+                // Города
+                const citySegs = getObjectSegments(root, 'C');
+                if (citySegs.length > 0 && !isObjectComplete(citySegs, 'C')) {
+                    const owner = getOwner(citySegs, 'C');
+                    let pts = citySegs.length;
+                    for (const seg of citySegs) {
+                        const p = seg.split(',');
+                        const t = carBoardData[parseInt(p[0])][parseInt(p[1])];
+                        if (TILE_DATA[t.imgIndex].crest) pts += 1;
                     }
                     if (owner === 'blue') bluePoints += pts;
                     if (owner === 'red') redPoints += pts;
-                } else if (type === 'R') {
-                    if (owner === 'blue') bluePoints += size;
-                    if (owner === 'red') redPoints += size;
+                }
+
+                // Дороги
+                const roadSegs = getObjectSegments(root, 'R');
+                if (roadSegs.length > 0 && !isObjectComplete(roadSegs, 'R')) {
+                    const owner = getOwner(roadSegs, 'R');
+                    if (owner === 'blue') bluePoints += roadSegs.length;
+                    if (owner === 'red') redPoints += roadSegs.length;
                 }
             }
 
-            // Финальный подсчёт монастырей
+            // Монастыри
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const tile = carBoardData[r][c];
