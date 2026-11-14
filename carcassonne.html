@@ -277,7 +277,7 @@
         // НАСТРОЙКИ
         // ==========================================
         const BOARD_SIZE = 15;
-        const TILE_FOLDER = "";
+        const TILE_FOLDER = "tiles/";
         const FILE_EXTENSION = ".jpg";
 
         // Стороны — исходные. farmGroups/cityFarmAdj — для rotation=0.
@@ -369,6 +369,7 @@
         let currentTileIndex = null;
         let currentRotation = 0;
         let currentPlayer = 'blue';
+        let gameOver = false;
 
         let blueMeeples = 7;
         let redMeeples = 7;
@@ -596,6 +597,7 @@
         // ТАЙЛЫ
         // ==========================================
         function drawTile() {
+            if (gameOver) return;
             if (currentTileIndex !== null) {
                 document.getElementById('status-text').innerText = "Сначала поставьте текущий тайл!";
                 return;
@@ -678,7 +680,7 @@
         }
 
         function onCarCellClick(r, c) {
-            if (currentTileIndex === null) return;
+            if (gameOver || currentTileIndex === null) return;
             if (carBoardData[r][c] !== null) return;
             if (!isValidPlacement(r, c, currentTileIndex, currentRotation)) {
                 document.getElementById('status-text').innerText = "Нельзя ставить здесь!";
@@ -723,6 +725,28 @@
                     dsu.find(key);
                     allSegments.add(key);
                     tile.segments[side] = type;
+                }
+            }
+
+            // Соединяем сегменты, которые физически являются одной областью внутри тайла.
+            // У этих тайлов две отдельные части города, разделённые полем.
+            const splitCityTiles = new Set([16, 17, 19, 20, 39, 43, 104]);
+            const citySides = SIDE_ORDER.filter(side => sides[side] === 'C');
+            const roadSides = SIDE_ORDER.filter(side => sides[side] === 'R');
+            if (citySides.length > 1) {
+                if (splitCityTiles.has(tile.imgIndex)) {
+                    // У указанных тайлов городские сегменты попарно не соединены.
+                    for (const side of citySides) dsu.find(segKey(r, c, side));
+                } else {
+                    for (let i = 1; i < citySides.length; i++) {
+                        dsu.union(segKey(r, c, citySides[0]), segKey(r, c, citySides[i]));
+                    }
+                }
+            }
+            // Дорожные рукава сходятся в один дорожный объект на тайле.
+            if (roadSides.length > 1) {
+                for (let i = 1; i < roadSides.length; i++) {
+                    dsu.union(segKey(r, c, roadSides[0]), segKey(r, c, roadSides[i]));
                 }
             }
 
@@ -780,8 +804,9 @@
         // ==========================================
         function getObjectSegments(root, type) {
             const result = [];
+            const normalizedRoot = dsu.find(root);
             for (const seg of allSegments) {
-                if (dsu.find(seg) !== root) continue;
+                if (dsu.find(seg) !== normalizedRoot) continue;
                 const p = seg.split(',');
                 const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
                 const t = carBoardData[rr][cc];
@@ -857,6 +882,7 @@
             }
             if (counts.blue > counts.red) return 'blue';
             if (counts.red > counts.blue) return 'red';
+            if (counts.blue > 0 && counts.blue === counts.red) return 'both';
             return null;
         }
 
@@ -911,8 +937,8 @@
                     if (TILE_DATA[carBoardData[rr][cc].imgIndex].crest) pts += 2;
                 }
                 const owner = getOwner(segs);
-                if (owner === 'blue') bluePoints += pts;
-                if (owner === 'red') redPoints += pts;
+                if (owner === 'blue' || owner === 'both') bluePoints += pts;
+                if (owner === 'red' || owner === 'both') redPoints += pts;
                 addLog(`🏰 Город: ${tiles.size} тайл., +${pts} ${owner || '—'}`);
                 returnMeeples(segs);
 
@@ -924,7 +950,7 @@
                         if (adjCitySide !== cs) continue;
                         const fkey = farmSegKey(rr, cc, adjFarmSide);
                         if (farmDsu.parent[fkey] !== undefined) {
-                            cityFarmLinks.push({ cityRoot: root, farmRoot: farmDsu.find(fkey) });
+                            cityFarmLinks.push({ cityRoot: dsu.find(root), farmSeg: fkey });
                         }
                     }
                 }
@@ -941,19 +967,23 @@
                 const tiles = getObjectTiles(segs);
                 const pts = tiles.size;
                 const owner = getOwner(segs);
-                if (owner === 'blue') bluePoints += pts;
-                if (owner === 'red') redPoints += pts;
+                if (owner === 'blue' || owner === 'both') bluePoints += pts;
+                if (owner === 'red' || owner === 'both') redPoints += pts;
                 addLog(`🛣️ Дорога: ${tiles.size} тайл., +${pts} ${owner || '—'}`);
                 returnMeeples(segs);
             }
 
-            // МОНАСТЫРЬ
-            if (TILE_DATA[tile.imgIndex].center === 'M' && isMonasteryComplete(r, c)) {
-                if (tile.meeple && tile.meeple.zone === 'center') {
-                    if (tile.meeple.color === 'blue') { bluePoints += 9; blueMeeples++; }
+            // МОНАСТЫРИ: проверяем новый тайл и все монастыри вокруг него.
+            for (let mr = Math.max(0, r - 1); mr <= Math.min(BOARD_SIZE - 1, r + 1); mr++) {
+                for (let mc = Math.max(0, c - 1); mc <= Math.min(BOARD_SIZE - 1, c + 1); mc++) {
+                    const monastery = carBoardData[mr][mc];
+                    if (!monastery || TILE_DATA[monastery.imgIndex].center !== 'M') continue;
+                    if (!monastery.meeple || monastery.meeple.zone !== 'center') continue;
+                    if (!isMonasteryComplete(mr, mc)) continue;
+                    if (monastery.meeple.color === 'blue') { bluePoints += 9; blueMeeples++; }
                     else { redPoints += 9; redMeeples++; }
-                    tile.meeple = null;
-                    addLog(`⛪ Монастырь: +9`);
+                    monastery.meeple = null;
+                    addLog('⛪ Монастырь: +9');
                 }
             }
 
@@ -976,6 +1006,7 @@
         // ФИШКИ
         // ==========================================
         function startMeeplePlacement() {
+            if (gameOver) return;
             if (lastPlacedR === -1 || lastPlacedC === -1) return;
             if (carBoardData[lastPlacedR][lastPlacedC].meeple) return;
 
@@ -1071,6 +1102,7 @@
         }
 
         function skipTurn() {
+            if (gameOver) return;
             if (currentTileIndex !== null) {
                 document.getElementById('status-text').innerText = "Сначала поставьте тайл!";
                 return;
@@ -1123,6 +1155,12 @@
         // ФИНАЛЬНЫЙ ПОДСЧЁТ
         // ==========================================
         function endGame() {
+            if (gameOver) return;
+            if (currentTileIndex !== null) {
+                document.getElementById('status-text').innerText = 'Сначала поставьте или сбросьте взятый тайл.';
+                return;
+            }
+            gameOver = true;
             // 1. Незавершённые города и дороги
             const roots = new Set();
             for (const seg of allSegments) roots.add(dsu.find(seg));
@@ -1148,7 +1186,7 @@
                             if (adjCitySide !== cs) continue;
                             const fkey = farmSegKey(rr, cc, adjFarmSide);
                             if (farmDsu.parent[fkey] !== undefined) {
-                                cityFarmLinks.push({ cityRoot: root, farmRoot: farmDsu.find(fkey) });
+                                cityFarmLinks.push({ cityRoot: dsu.find(root), farmSeg: fkey });
                             }
                         }
                     }
@@ -1189,9 +1227,12 @@
             // 3. Фермы
             const farmCities = {};
             for (const link of cityFarmLinks) {
-                if (!finishedCityRoots.has(link.cityRoot)) continue;
-                if (!farmCities[link.farmRoot]) farmCities[link.farmRoot] = new Set();
-                farmCities[link.farmRoot].add(link.cityRoot);
+                const cityRoot = dsu.find(link.cityRoot);
+                if (!finishedCityRoots.has(cityRoot)) continue;
+                if (farmDsu.parent[link.farmSeg] === undefined) continue;
+                const farmRoot = farmDsu.find(link.farmSeg);
+                if (!farmCities[farmRoot]) farmCities[farmRoot] = new Set();
+                farmCities[farmRoot].add(cityRoot);
             }
 
             const farmRoots = new Set();
