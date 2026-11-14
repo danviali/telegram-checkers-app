@@ -187,11 +187,25 @@
             cursor: pointer;
             margin-top: 20px;
         }
+
+        #log-panel {
+            width: 100%;
+            max-height: 100px;
+            overflow-y: auto;
+            background: #131821;
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #8b949e;
+            border: 1px solid #1e2633;
+        }
+        #log-panel div { padding: 2px 0; border-bottom: 1px solid #1e2633; }
     </style>
 </head>
 <body>
 
-    <div id="version-label"># Каркассон v3.3 (фикс фишек)</div>
+    <div id="version-label"># Каркассон v4.0 (полные правила)</div>
 
     <div id="carcassonne-screen">
         <div class="player-panel" id="player1-panel">
@@ -213,7 +227,7 @@
             <div class="btn-row" style="margin-top: 10px;">
                 <button class="btn btn-red" id="btn-replace" onclick="replaceTile()">🔄 Поменять</button>
             </div>
-            <button class="btn btn-end" onclick="endGame()">🏁 Закончить игру и подсчитать очки</button>
+            <button class="btn btn-end" onclick="endGame()">🏁 Закончить игру</button>
         </div>
 
         <div id="status-text">Нажми "Взять тайл"</div>
@@ -227,6 +241,8 @@
             <span style="font-size: 18px;"><span id="player2-meeples">🧙‍♂️ 7</span></span>
         </div>
         <div style="font-size: 14px; color: #f1c40f; margin-top: 5px;">Очки: <span id="player2-score">0</span></div>
+
+        <div id="log-panel"></div>
     </div>
 
     <div id="meeple-modal">
@@ -259,91 +275,88 @@
         const TILE_FOLDER = "";
         const FILE_EXTENSION = ".jpg";
 
-        // Удалены индексы: 49,50,53,54,57,58,61,62,65,66,67,68,69,73,74,75,76,77,79,80,81,84,85,88,89
+        // Расширенная структура: farmGroups (какие края-поля — одна ферма),
+        // cityFarmAdj (какие города граничат с какими полями)
         const TILE_DATA = {
-            1: { left: "R", top: "F", right: "R", bottom: "F" },
-            2: { left: "R", top: "F", right: "R", bottom: "F" },
-            3: { left: "R", top: "F", right: "R", bottom: "F" },
-            4: { left: "R", top: "F", right: "R", bottom: "F" },
-            5: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            6: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            7: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            8: { left: "F", top: "F", right: "F", bottom: "F", center: "M" },
-            9: { left: "F", top: "R", right: "F", bottom: "F", center: "M" },
-            10: { left: "R", top: "F", right: "R", bottom: "C" },
-            11: { left: "R", top: "F", right: "R", bottom: "C" },
-            12: { left: "R", top: "F", right: "F", bottom: "F", center: "M" },
-            13: { left: "F", top: "F", right: "F", bottom: "C" },
-            14: { left: "F", top: "F", right: "F", bottom: "C" },
-            15: { left: "F", top: "C", right: "F", bottom: "F" },
-            16: { left: "F", top: "C", right: "F", bottom: "C" },
-            17: { left: "F", top: "C", right: "F", bottom: "C" },
-            18: { left: "F", top: "F", right: "F", bottom: "C" },
-            19: { left: "F", top: "C", right: "F", bottom: "C" },
-            20: { left: "F", top: "C", right: "F", bottom: "C" },
-            21: { left: "C", top: "C", right: "R", bottom: "R", crest: true },
-            22: { left: "R", top: "C", right: "C", bottom: "R", crest: true },
-            23: { left: "C", top: "C", right: "R", bottom: "R" },
-            24: { left: "R", top: "C", right: "C", bottom: "R" },
-            25: { left: "F", top: "R", right: "R", bottom: "C" },
-            26: { left: "F", top: "R", right: "R", bottom: "C" },
-            27: { left: "R", top: "R", right: "F", bottom: "C" },
-            28: { left: "R", top: "R", right: "F", bottom: "C" },
-            29: { left: "F", top: "C", right: "C", bottom: "C", crest: true },
-            30: { left: "C", top: "C", right: "F", bottom: "C" },
-            31: { left: "F", top: "C", right: "C", bottom: "C" },
-            32: { left: "C", top: "C", right: "F", bottom: "C" },
-            33: { left: "R", top: "C", right: "R", bottom: "R" },
-            34: { left: "R", top: "C", right: "C", bottom: "R" },
-            35: { left: "C", top: "C", right: "F", bottom: "F", crest: true },
-            36: { left: "F", top: "C", right: "C", bottom: "F" },
-            37: { left: "F", top: "R", right: "R", bottom: "F" },
-            38: { left: "R", top: "R", right: "C", bottom: "R" },
-            39: { left: "C", top: "F", right: "C", bottom: "F", crest: true },
-            40: { left: "C", top: "F", right: "F", bottom: "C" },
-            41: { left: "F", top: "F", right: "C", bottom: "C", crest: true },
-            42: { left: "C", top: "R", right: "C", bottom: "C", crest: true },
-            43: { left: "C", top: "F", right: "C", bottom: "F" },
-            44: { left: "C", top: "C", right: "C", bottom: "C", crest: true },
-            45: { left: "C", top: "C", right: "C", bottom: "R", crest: true },
-            46: { left: "C", top: "C", right: "F", bottom: "F" },
-            47: { left: "C", top: "C", right: "F", bottom: "F" },
-            48: { left: "F", top: "F", right: "C", bottom: "C" },
-            51: { left: "F", top: "F", right: "R", bottom: "R" },
-            52: { left: "R", top: "R", right: "F", bottom: "R" },
-            55: { left: "C", top: "R", right: "R", bottom: "R" },
-            56: { left: "R", top: "R", right: "F", bottom: "R" },
-            59: { left: "F", top: "R", right: "R", bottom: "F" },
-            60: { left: "R", top: "R", right: "F", bottom: "R" },
-            63: { left: "R", top: "F", right: "R", bottom: "F" },
-            64: { left: "R", top: "R", right: "R", bottom: "F" },
-            70: { left: "F", top: "R", right: "R", bottom: "F" },
-            71: { left: "R", top: "F", right: "F", bottom: "R" },
-            72: { left: "F", top: "F", right: "R", bottom: "R" },
-            78: { left: "C", top: "C", right: "F", bottom: "C", crest: true },
-            82: { left: "C", top: "C", right: "F", bottom: "R" },
-            83: { left: "F", top: "R", right: "F", bottom: "R" },
-            86: { left: "C", top: "R", right: "R", bottom: "C", crest: true },
-            87: { left: "R", top: "R", right: "R", bottom: "R" },
-            90: { left: "C", top: "C", right: "C", bottom: "C" },
-            91: { left: "C", top: "R", right: "C", bottom: "R" },
-            92: { left: "C", top: "C", right: "R", bottom: "R" },
-            93: { left: "C", top: "C", right: "R", bottom: "F" },
-            94: { left: "R", top: "C", right: "F", bottom: "R" },
-            95: { left: "F", top: "R", right: "R", bottom: "F" },
-            96: { left: "R", top: "R", right: "R", bottom: "R" },
-            97: { left: "C", top: "F", right: "R", bottom: "R" },
-            98: { left: "R", top: "F", right: "R", bottom: "F" },
-            99: { left: "R", top: "F", right: "C", bottom: "R" },
-            100: { left: "C", top: "C", right: "R", bottom: "C" },
-            101: { left: "F", top: "R", right: "F", bottom: "R" },
-            102: { left: "F", top: "F", right: "C", bottom: "F" },
-            103: { left: "C", top: "R", right: "F", bottom: "R" },
-            104: { left: "F", top: "C", right: "F", bottom: "C", crest: true },
-            105: { left: "F", top: "R", right: "R", bottom: "F" },
-            106: { left: "R", top: "F", right: "R", bottom: "F" },
-            107: { left: "R", top: "R", right: "R", bottom: "R" },
-            108: { left: "R", top: "C", right: "R", bottom: "F" }
+            1:  { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            2:  { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            3:  { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            4:  { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            5:  { left:"F", top:"F", right:"F", bottom:"F", center:"M", farmGroups:[["left","top","right","bottom"]], cityFarmAdj:[] },
+            6:  { left:"F", top:"F", right:"F", bottom:"F", center:"M", farmGroups:[["left","top","right","bottom"]], cityFarmAdj:[] },
+            7:  { left:"F", top:"F", right:"F", bottom:"F", center:"M", farmGroups:[["left","top","right","bottom"]], cityFarmAdj:[] },
+            8:  { left:"F", top:"F", right:"F", bottom:"F", center:"M", farmGroups:[["left","top","right","bottom"]], cityFarmAdj:[] },
+            9:  { left:"F", top:"F", right:"R", bottom:"F", center:"M", farmGroups:[["left","top","bottom"]], cityFarmAdj:[] },
+            10: { left:"R", top:"F", right:"R", bottom:"C", farmGroups:[["top"]], cityFarmAdj:[["bottom","top"]] },
+            11: { left:"R", top:"F", right:"R", bottom:"C", farmGroups:[["top"]], cityFarmAdj:[["bottom","top"]] },
+            12: { left:"R", top:"F", right:"F", bottom:"F", center:"M", farmGroups:[["top","right","bottom"]], cityFarmAdj:[] },
+            13: { left:"F", top:"F", right:"F", bottom:"C", farmGroups:[["left","top","right"]], cityFarmAdj:[["bottom","left"],["bottom","top"],["bottom","right"]] },
+            14: { left:"F", top:"F", right:"F", bottom:"C", farmGroups:[["left","top","right"]], cityFarmAdj:[["bottom","left"],["bottom","top"],["bottom","right"]] },
+            15: { left:"F", top:"C", right:"F", bottom:"F", farmGroups:[["left","right","bottom"]], cityFarmAdj:[["top","left"],["top","right"],["top","bottom"]] },
+            16: { left:"F", top:"C", right:"F", bottom:"C", farmGroups:[["left","right"]], cityFarmAdj:[["top","left"],["top","right"],["bottom","left"],["bottom","right"]] },
+            17: { left:"F", top:"C", right:"F", bottom:"C", farmGroups:[["left","right"]], cityFarmAdj:[["top","left"],["top","right"],["bottom","left"],["bottom","right"]] },
+            18: { left:"F", top:"F", right:"F", bottom:"C", farmGroups:[["left","top","right"]], cityFarmAdj:[["bottom","left"],["bottom","top"],["bottom","right"]] },
+            19: { left:"F", top:"C", right:"F", bottom:"C", farmGroups:[["left","right"]], cityFarmAdj:[["top","left"],["top","right"],["bottom","left"],["bottom","right"]] },
+            20: { left:"F", top:"C", right:"F", bottom:"C", farmGroups:[["left","right"]], cityFarmAdj:[["top","left"],["top","right"],["bottom","left"],["bottom","right"]] },
+            21: { left:"C", top:"C", right:"R", bottom:"R", crest:true, farmGroups:[], cityFarmAdj:[] },
+            22: { left:"R", top:"C", right:"C", bottom:"R", crest:true, farmGroups:[], cityFarmAdj:[] },
+            23: { left:"C", top:"C", right:"R", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            24: { left:"R", top:"C", right:"C", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            25: { left:"F", top:"R", right:"R", bottom:"C", farmGroups:[["left"]], cityFarmAdj:[["bottom","left"]] },
+            26: { left:"F", top:"R", right:"R", bottom:"C", farmGroups:[["left"]], cityFarmAdj:[["bottom","left"]] },
+            27: { left:"R", top:"R", right:"F", bottom:"C", farmGroups:[["right"]], cityFarmAdj:[["bottom","right"]] },
+            28: { left:"R", top:"R", right:"F", bottom:"C", farmGroups:[["right"]], cityFarmAdj:[["bottom","right"]] },
+            29: { left:"F", top:"C", right:"C", bottom:"C", crest:true, farmGroups:[["left"]], cityFarmAdj:[["top","left"],["right","left"],["bottom","left"]] },
+            30: { left:"C", top:"C", right:"F", bottom:"C", farmGroups:[["right"]], cityFarmAdj:[["top","right"],["left","right"],["bottom","right"]] },
+            31: { left:"F", top:"C", right:"C", bottom:"C", farmGroups:[["left"]], cityFarmAdj:[["top","left"],["right","left"],["bottom","left"]] },
+            32: { left:"C", top:"C", right:"F", bottom:"C", farmGroups:[["right"]], cityFarmAdj:[["top","right"],["left","right"],["bottom","right"]] },
+            33: { left:"R", top:"C", right:"R", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            34: { left:"R", top:"C", right:"C", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            35: { left:"C", top:"C", right:"F", bottom:"F", crest:true, farmGroups:[["right","bottom"]], cityFarmAdj:[["left","right"],["left","bottom"],["top","right"],["top","bottom"]] },
+            36: { left:"F", top:"C", right:"C", bottom:"F", farmGroups:[["left","bottom"]], cityFarmAdj:[["top","left"],["top","bottom"],["right","left"],["right","bottom"]] },
+            37: { left:"F", top:"R", right:"R", bottom:"F", farmGroups:[["left"],["bottom"]], cityFarmAdj:[] },
+            38: { left:"R", top:"R", right:"C", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            39: { left:"C", top:"F", right:"C", bottom:"F", crest:true, farmGroups:[["top"],["bottom"]], cityFarmAdj:[["left","top"],["left","bottom"],["right","top"],["right","bottom"]] },
+            40: { left:"C", top:"F", right:"F", bottom:"C", farmGroups:[["top","right"]], cityFarmAdj:[["left","top"],["left","right"],["bottom","top"],["bottom","right"]] },
+            41: { left:"F", top:"F", right:"C", bottom:"C", crest:true, farmGroups:[["left","top"]], cityFarmAdj:[["right","left"],["right","top"],["bottom","left"],["bottom","top"]] },
+            42: { left:"C", top:"R", right:"C", bottom:"C", crest:true, farmGroups:[], cityFarmAdj:[] },
+            43: { left:"C", top:"F", right:"C", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[["left","top"],["left","bottom"],["right","top"],["right","bottom"]] },
+            44: { left:"C", top:"C", right:"C", bottom:"C", crest:true, farmGroups:[], cityFarmAdj:[] },
+            45: { left:"C", top:"C", right:"C", bottom:"R", crest:true, farmGroups:[], cityFarmAdj:[] },
+            46: { left:"C", top:"C", right:"F", bottom:"F", farmGroups:[["right","bottom"]], cityFarmAdj:[["left","right"],["left","bottom"],["top","right"],["top","bottom"]] },
+            47: { left:"C", top:"C", right:"F", bottom:"F", farmGroups:[["right","bottom"]], cityFarmAdj:[["left","right"],["left","bottom"],["top","right"],["top","bottom"]] },
+            48: { left:"F", top:"F", right:"C", bottom:"C", farmGroups:[["left","top"]], cityFarmAdj:[["right","left"],["right","top"],["bottom","left"],["bottom","top"]] },
+            51: { left:"F", top:"F", right:"R", bottom:"R", farmGroups:[["left","top"]], cityFarmAdj:[] },
+            52: { left:"R", top:"R", right:"F", bottom:"R", farmGroups:[["right"]], cityFarmAdj:[] },
+            55: { left:"C", top:"R", right:"R", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            56: { left:"R", top:"R", right:"F", bottom:"R", farmGroups:[["right"]], cityFarmAdj:[] },
+            59: { left:"F", top:"R", right:"R", bottom:"F", farmGroups:[["left"],["bottom"]], cityFarmAdj:[] },
+            60: { left:"R", top:"R", right:"F", bottom:"R", farmGroups:[["right"]], cityFarmAdj:[] },
+            63: { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            64: { left:"R", top:"R", right:"R", bottom:"F", farmGroups:[["bottom"]], cityFarmAdj:[] },
+            70: { left:"F", top:"R", right:"R", bottom:"F", farmGroups:[["left"],["bottom"]], cityFarmAdj:[] },
+            71: { left:"R", top:"F", right:"F", bottom:"R", farmGroups:[["top","right"]], cityFarmAdj:[] },
+            72: { left:"F", top:"F", right:"R", bottom:"R", farmGroups:[["left","top"]], cityFarmAdj:[] },
+            78: { left:"C", top:"C", right:"F", bottom:"C", crest:true, farmGroups:[["right"]], cityFarmAdj:[["top","right"],["left","right"],["bottom","right"]] },
+            82: { left:"C", top:"C", right:"F", bottom:"R", farmGroups:[["right"]], cityFarmAdj:[["top","right"],["left","right"]] },
+            83: { left:"F", top:"R", right:"F", bottom:"R", farmGroups:[["left"],["right"]], cityFarmAdj:[] },
+            86: { left:"C", top:"R", right:"R", bottom:"C", crest:true, farmGroups:[], cityFarmAdj:[] },
+            87: { left:"R", top:"R", right:"R", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            93: { left:"C", top:"C", right:"R", bottom:"F", farmGroups:[["bottom"]], cityFarmAdj:[["left","bottom"],["top","bottom"]] },
+            95: { left:"F", top:"R", right:"R", bottom:"F", farmGroups:[["left"],["bottom"]], cityFarmAdj:[] },
+            96: { left:"R", top:"R", right:"R", bottom:"R", farmGroups:[], cityFarmAdj:[] },
+            97: { left:"C", top:"F", right:"R", bottom:"R", farmGroups:[["top"]], cityFarmAdj:[["left","top"]] },
+            98: { left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            99: { left:"R", top:"F", right:"C", bottom:"R", farmGroups:[["top"]], cityFarmAdj:[["right","top"]] },
+            100:{ left:"C", top:"C", right:"R", bottom:"C", farmGroups:[], cityFarmAdj:[] },
+            101:{ left:"F", top:"R", right:"F", bottom:"R", farmGroups:[["left"],["right"]], cityFarmAdj:[] },
+            102:{ left:"F", top:"F", right:"C", bottom:"F", farmGroups:[["left","top","bottom"]], cityFarmAdj:[["right","left"],["right","top"],["right","bottom"]] },
+            103:{ left:"C", top:"R", right:"F", bottom:"R", farmGroups:[["right"]], cityFarmAdj:[["left","right"]] },
+            104:{ left:"F", top:"C", right:"F", bottom:"C", crest:true, farmGroups:[["left","right"]], cityFarmAdj:[["top","left"],["top","right"],["bottom","left"],["bottom","right"]] },
+            105:{ left:"F", top:"R", right:"R", bottom:"F", farmGroups:[["left"],["bottom"]], cityFarmAdj:[] },
+            106:{ left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            107:{ left:"R", top:"F", right:"R", bottom:"F", farmGroups:[["top"],["bottom"]], cityFarmAdj:[] },
+            108:{ left:"R", top:"R", right:"R", bottom:"R", farmGroups:[], cityFarmAdj:[] }
         };
 
         const VALID_TILES = Object.keys(TILE_DATA).map(Number);
@@ -371,6 +384,7 @@
 
         const carBoardElement = document.getElementById('carcassonne-board');
         const wrapper = document.getElementById('board-wrapper');
+        const logPanel = document.getElementById('log-panel');
 
         // ==========================================
         // DSU (Union-Find) для объектов
@@ -388,13 +402,25 @@
             }
         }
 
-        const dsu = new DSU();
-        let allSegments = new Set();
+        const dsu = new DSU();          // для городов и дорог
+        const farmDsu = new DSU();      // для ферм
+        let allSegments = new Set();    // все сегменты городов/дорог
+        let allFarmSegments = new Set();// все сегменты ферм
+        let finishedCityRoots = new Set(); // корни завершённых городов (для подсчёта ферм)
+        let cityFarmLinks = [];         // [{cityRoot, farmRoot}] — связи город-ферма
 
         const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
         const DIR = { top: [-1, 0], bottom: [1, 0], left: [0, -1], right: [0, 1] };
 
         function segKey(r, c, side) { return `${r},${c},${side}`; }
+        function farmSegKey(r, c, side) { return `farm:${r},${c},${side}`; }
+
+        function addLog(msg) {
+            const d = document.createElement('div');
+            d.textContent = msg;
+            logPanel.prepend(d);
+            while (logPanel.children.length > 30) logPanel.removeChild(logPanel.lastChild);
+        }
 
         // ==========================================
         // ИНИЦИАЛИЗАЦИЯ
@@ -458,29 +484,22 @@
 
         function addPanListeners() {
             wrapper.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                dragMoved = false;
-                startX = e.clientX - panX;
-                startY = e.clientY - panY;
+                isDragging = true; dragMoved = false;
+                startX = e.clientX - panX; startY = e.clientY - panY;
             });
-
             wrapper.addEventListener('mousemove', (e) => {
                 if (!isDragging) return;
-                const newPanX = e.clientX - startX;
-                const newPanY = e.clientY - startY;
+                const newPanX = e.clientX - startX, newPanY = e.clientY - startY;
                 if (Math.abs(newPanX - panX) > 3 || Math.abs(newPanY - panY) > 3) dragMoved = true;
-                panX = newPanX;
-                panY = newPanY;
+                panX = newPanX; panY = newPanY;
                 updateBoardTransform();
             });
-
             wrapper.addEventListener('mouseup', () => { isDragging = false; });
             wrapper.addEventListener('mouseleave', () => { isDragging = false; });
 
             wrapper.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1) {
-                    isDragging = true;
-                    dragMoved = false;
+                    isDragging = true; dragMoved = false;
                     startX = e.touches[0].clientX - panX;
                     startY = e.touches[0].clientY - panY;
                 }
@@ -492,8 +511,7 @@
                     const newPanX = e.touches[0].clientX - startX;
                     const newPanY = e.touches[0].clientY - startY;
                     if (Math.abs(newPanX - panX) > 3 || Math.abs(newPanY - panY) > 3) dragMoved = true;
-                    panX = newPanX;
-                    panY = newPanY;
+                    panX = newPanX; panY = newPanY;
                     updateBoardTransform();
                 }
             }, { passive: false });
@@ -518,8 +536,7 @@
                         e.touches[0].clientX - e.touches[1].clientX,
                         e.touches[0].clientY - e.touches[1].clientY
                     );
-                    const factor = currentDistance / initialPinchDistance;
-                    scale *= factor;
+                    scale *= currentDistance / initialPinchDistance;
                     if (scale < 0.5) scale = 0.5;
                     if (scale > 5) scale = 5;
                     initialPinchDistance = currentDistance;
@@ -530,6 +547,47 @@
             wrapper.addEventListener('touchend', (e) => {
                 if (e.touches.length < 2) initialPinchDistance = null;
             });
+        }
+
+        // ==========================================
+        // ПОВОРОТ СТОРОН
+        // ==========================================
+        function rotateSide(side, rotation) {
+            if (rotation === 0) return side;
+            const order = ['top', 'right', 'bottom', 'left'];
+            const idx = order.indexOf(side);
+            const shift = rotation / 90;
+            return order[(idx + shift) % 4];
+        }
+
+        function getRotatedSides(tile, rotation) {
+            return {
+                top: tile[rotateSide('top', (4 - rotation/90) % 4)],
+                right: tile[rotateSide('right', (4 - rotation/90) % 4)],
+                bottom: tile[rotateSide('bottom', (4 - rotation/90) % 4)],
+                left: tile[rotateSide('left', (4 - rotation/90) % 4)]
+            };
+        }
+
+        // Поворот farmGroups: каждая группа — массив сторон
+        function getRotatedFarmGroups(tile, rotation) {
+            if (!tile.farmGroups) return [];
+            const shift = rotation / 90;
+            const order = ['top', 'right', 'bottom', 'left'];
+            return tile.farmGroups.map(group =>
+                group.map(side => order[(order.indexOf(side) + shift) % 4])
+            );
+        }
+
+        // Поворот cityFarmAdj: пары [citySide, farmSide]
+        function getRotatedCityFarmAdj(tile, rotation) {
+            if (!tile.cityFarmAdj) return [];
+            const shift = rotation / 90;
+            const order = ['top', 'right', 'bottom', 'left'];
+            return tile.cityFarmAdj.map(([cs, fs]) => [
+                order[(order.indexOf(cs) + shift) % 4],
+                order[(order.indexOf(fs) + shift) % 4]
+            ]);
         }
 
         // ==========================================
@@ -567,18 +625,6 @@
             } else {
                 document.getElementById('status-text').innerText = `Вытянут тайл #${currentTileIndex}.`;
             }
-        }
-
-        function getRotatedSides(tile, rotation) {
-            let sides = { ...tile };
-            if (rotation === 90) {
-                sides = { top: tile.left, right: tile.top, bottom: tile.right, left: tile.bottom };
-            } else if (rotation === 180) {
-                sides = { top: tile.bottom, right: tile.left, bottom: tile.top, left: tile.right };
-            } else if (rotation === 270) {
-                sides = { top: tile.right, right: tile.bottom, bottom: tile.left, left: tile.top };
-            }
-            return sides;
         }
 
         function isValidPlacement(r, c, tileIndex, rotation) {
@@ -647,7 +693,6 @@
         function onCarCellClick(r, c) {
             if (currentTileIndex === null) return;
             if (carBoardData[r][c] !== null) return;
-
             if (!isValidPlacement(r, c, currentTileIndex, currentRotation)) {
                 document.getElementById('status-text').innerText = "Нельзя ставить здесь!";
                 return;
@@ -663,6 +708,7 @@
             lastPlacedC = c;
 
             registerTileSegments(r, c);
+            registerTileFarms(r, c);
             renderCarBoard();
             updateScoresAfterPlacement(r, c);
 
@@ -676,7 +722,7 @@
         }
 
         // ==========================================
-        // DSU: РЕГИСТРАЦИЯ СЕГМЕНТОВ
+        // DSU: РЕГИСТРАЦИЯ СЕГМЕНТОВ (город/дорога)
         // ==========================================
         function registerTileSegments(r, c) {
             const tile = carBoardData[r][c];
@@ -708,7 +754,50 @@
             }
         }
 
-        // Собрать сегменты объекта по корню и ТИПУ
+        // ==========================================
+        // DSU: РЕГИСТРАЦИЯ ФЕРМ
+        // ==========================================
+        function registerTileFarms(r, c) {
+            const tile = carBoardData[r][c];
+            const tileData = TILE_DATA[tile.imgIndex];
+            const groups = getRotatedFarmGroups(tileData, tile.rotation);
+
+            // Для каждой группы полей создаём сегменты и объединяем их
+            tile.farmGroups = groups;
+            for (const group of groups) {
+                let prevKey = null;
+                for (const side of group) {
+                    const key = farmSegKey(r, c, side);
+                    farmDsu.find(key);
+                    allFarmSegments.add(key);
+                    if (prevKey !== null) farmDsu.union(prevKey, key);
+                    prevKey = key;
+                }
+            }
+
+            // Соединяем с соседями по краям-полям
+            const sides = getRotatedSides(tileData, tile.rotation);
+            for (const side of ['top', 'bottom', 'left', 'right']) {
+                if (sides[side] !== 'F') continue;
+                const [dr, dc] = DIR[side];
+                const nr = r + dr, nc = c + dc;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                const neighbor = carBoardData[nr][nc];
+                if (!neighbor) continue;
+                const nSides = getRotatedSides(TILE_DATA[neighbor.imgIndex], neighbor.rotation);
+                if (nSides[OPPOSITE[side]] === 'F') {
+                    farmDsu.union(farmSegKey(r, c, side), farmSegKey(nr, nc, OPPOSITE[side]));
+                }
+            }
+
+            // Записываем связи город-ферма
+            const adj = getRotatedCityFarmAdj(tileData, tile.rotation);
+            tile.cityFarmAdj = adj;
+        }
+
+        // ==========================================
+        // ПРОВЕРКА ЗАВЕРШЁННОСТИ
+        // ==========================================
         function getObjectSegments(root, type) {
             const result = [];
             for (const seg of allSegments) {
@@ -723,28 +812,24 @@
             return result;
         }
 
-        // Завершённость объекта (по его сегментам и типу)
         function isObjectComplete(segments, type) {
             for (const seg of segments) {
                 const parts = seg.split(',');
                 const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
                 const tile = carBoardData[rr][cc];
                 if (!tile) return false;
-
                 const [dr, dc] = DIR[side];
                 const nr = rr + dr, nc = cc + dc;
                 if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) return false;
                 const neighbor = carBoardData[nr][nc];
                 if (!neighbor) return false;
-
                 const nSides = getRotatedSides(TILE_DATA[neighbor.imgIndex], neighbor.rotation);
                 if (nSides[OPPOSITE[side]] !== type) return false;
             }
             return true;
         }
 
-        // Владелец: только фишки этого объекта и в своей зоне
-        function getOwner(segments, type) {
+        function getOwner(segments) {
             const counts = { blue: 0, red: 0 };
             const seen = new Set();
             for (const seg of segments) {
@@ -753,7 +838,6 @@
                 const key = `${rr},${cc},${side}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
-
                 const tile = carBoardData[rr][cc];
                 if (!tile || !tile.meeple) continue;
                 if (tile.meeple.zone !== side) continue;
@@ -764,8 +848,7 @@
             return null;
         }
 
-        // Вернуть фишки, стоящие в этом объекте (только этой зоны)
-        function returnMeeples(segments, type) {
+        function returnMeeples(segments) {
             const seen = new Set();
             for (const seg of segments) {
                 const parts = seg.split(',');
@@ -773,24 +856,23 @@
                 const key = `${rr},${cc},${side}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
-
                 const tile = carBoardData[rr][cc];
                 if (!tile || !tile.meeple) continue;
                 if (tile.meeple.zone !== side) continue;
-
                 if (tile.meeple.color === 'blue') blueMeeples++;
                 else redMeeples++;
                 tile.meeple = null;
             }
         }
 
-        // Очки после постановки тайла
+        // ==========================================
+        // АВТОМАТИЧЕСКИЙ ПОДСЧЁТ ПРИ ЗАВЕРШЕНИИ
+        // ==========================================
         function updateScoresAfterPlacement(r, c) {
             const tile = carBoardData[r][c];
             if (!tile.segments) return;
 
             const sides = getRotatedSides(TILE_DATA[tile.imgIndex], tile.rotation);
-
             const cityRoots = new Set();
             const roadRoots = new Set();
             for (const side in tile.segments) {
@@ -800,12 +882,15 @@
                 else if (t === 'R') roadRoots.add(root);
             }
 
+            // ГОРОДА
             for (const root of cityRoots) {
+                if (finishedCityRoots.has(root)) continue;
                 const segments = getObjectSegments(root, 'C');
                 if (segments.length === 0) continue;
                 if (!isObjectComplete(segments, 'C')) continue;
 
-                const owner = getOwner(segments, 'C');
+                finishedCityRoots.add(root);
+                const owner = getOwner(segments);
                 let pts = segments.length * 2;
                 for (const seg of segments) {
                     const p = seg.split(',');
@@ -814,28 +899,47 @@
                 }
                 if (owner === 'blue') bluePoints += pts;
                 if (owner === 'red') redPoints += pts;
-                returnMeeples(segments, 'C');
+                addLog(`🏰 Город завершён! ${owner ? (owner==='blue'?'Синие':'Красные') : 'ничейный'} +${pts} очк.`);
+                returnMeeples(segments);
+
+                // Связываем город с прилегающими фермами для финального подсчёта
+                for (const seg of segments) {
+                    const p = seg.split(',');
+                    const rr = parseInt(p[0]), cc = parseInt(p[1]), cs = p[2];
+                    const t = carBoardData[rr][cc];
+                    const adj = t.cityFarmAdj || [];
+                    for (const [adjCitySide, adjFarmSide] of adj) {
+                        if (adjCitySide !== cs) continue;
+                        const fkey = farmSegKey(rr, cc, adjFarmSide);
+                        if (farmDsu.parent[fkey] !== undefined) {
+                            cityFarmLinks.push({ cityRoot: root, farmRoot: farmDsu.find(fkey) });
+                        }
+                    }
+                }
             }
 
+            // ДОРОГИ
             for (const root of roadRoots) {
                 const segments = getObjectSegments(root, 'R');
                 if (segments.length === 0) continue;
                 if (!isObjectComplete(segments, 'R')) continue;
 
-                const owner = getOwner(segments, 'R');
+                const owner = getOwner(segments);
                 const pts = segments.length;
                 if (owner === 'blue') bluePoints += pts;
                 if (owner === 'red') redPoints += pts;
-                returnMeeples(segments, 'R');
+                addLog(`🛣️ Дорога завершена! ${owner ? (owner==='blue'?'Синие':'Красные') : 'ничейная'} +${pts} очк.`);
+                returnMeeples(segments);
             }
 
-            // Монастырь
+            // МОНАСТЫРЬ
             if (TILE_DATA[tile.imgIndex].center === 'M') {
                 if (isMonasteryComplete(r, c)) {
                     if (tile.meeple && tile.meeple.zone === 'center') {
                         if (tile.meeple.color === 'blue') { bluePoints += 9; blueMeeples++; }
                         else { redPoints += 9; redMeeples++; }
                         tile.meeple = null;
+                        addLog(`⛪ Монастырь завершён! +9 очк.`);
                     }
                 }
             }
@@ -883,36 +987,51 @@
             let isValidZone = false;
             if (zone === 'center') {
                 if (tileData.center === 'M') isValidZone = true;
-            } else if (rotatedSides[zone] === 'R' || rotatedSides[zone] === 'C') {
-                isValidZone = true;
+            } else {
+                const t = rotatedSides[zone];
+                if (t === 'R' || t === 'C' || t === 'F') isValidZone = true;
             }
 
             if (!isValidZone) {
-                document.getElementById('status-text').innerText = "В это место фишку нельзя поставить! Выбери дорогу, город или монастырь.";
+                document.getElementById('status-text').innerText = "Сюда фишку нельзя поставить!";
                 closeMeepleModal();
                 return;
             }
 
-            // Проверка: есть ли чужая фишка в этом объекте
+            // Проверка: чужая фишка на том же объекте
+            const opponent = currentPlayer === 'blue' ? 'red' : 'blue';
             if (zone !== 'center') {
-                const seg = segKey(lastPlacedR, lastPlacedC, zone);
-                if (dsu.parent[seg] !== undefined) {
-                    const root = dsu.find(seg);
-                    const type = rotatedSides[zone];
-                    const segments = getObjectSegments(root, type);
-                    const opponent = currentPlayer === 'blue' ? 'red' : 'blue';
-                    const seen = new Set();
-                    for (const s of segments) {
-                        const parts = s.split(',');
-                        const rr = parseInt(parts[0]), cc = parseInt(parts[1]), side = parts[2];
-                        const key = `${rr},${cc},${side}`;
-                        if (seen.has(key)) continue;
-                        seen.add(key);
-                        const t = carBoardData[rr][cc];
-                        if (t && t.meeple && t.meeple.color === opponent && t.meeple.zone === side) {
-                            document.getElementById('status-text').innerText = "Сюда нельзя! Здесь уже есть фишка соперника.";
-                            closeMeepleModal();
-                            return;
+                const type = rotatedSides[zone];
+                if (type === 'F') {
+                    const fkey = farmSegKey(lastPlacedR, lastPlacedC, zone);
+                    if (farmDsu.parent[fkey] !== undefined) {
+                        const root = farmDsu.find(fkey);
+                        for (const seg of allFarmSegments) {
+                            if (farmDsu.find(seg) !== root) continue;
+                            const p = seg.split(',');
+                            const rr = parseInt(p[1]), cc = parseInt(p[2]), side = p[3];
+                            const t = carBoardData[rr][cc];
+                            if (t && t.meeple && t.meeple.color === opponent && t.meeple.zone === side) {
+                                document.getElementById('status-text').innerText = "Здесь уже есть фишка соперника на этой ферме.";
+                                closeMeepleModal();
+                                return;
+                            }
+                        }
+                    }
+                } else {
+                    const seg = segKey(lastPlacedR, lastPlacedC, zone);
+                    if (dsu.parent[seg] !== undefined) {
+                        const root = dsu.find(seg);
+                        const segments = getObjectSegments(root, type);
+                        for (const s of segments) {
+                            const p = s.split(',');
+                            const rr = parseInt(p[0]), cc = parseInt(p[1]), side = p[2];
+                            const t = carBoardData[rr][cc];
+                            if (t && t.meeple && t.meeple.color === opponent && t.meeple.zone === side) {
+                                document.getElementById('status-text').innerText = "Здесь уже есть фишка соперника на этом объекте.";
+                                closeMeepleModal();
+                                return;
+                            }
                         }
                     }
                 }
@@ -920,10 +1039,7 @@
 
             closeMeepleModal();
 
-            carBoardData[lastPlacedR][lastPlacedC].meeple = {
-                color: currentPlayer,
-                zone: zone
-            };
+            carBoardData[lastPlacedR][lastPlacedC].meeple = { color: currentPlayer, zone };
 
             if (currentPlayer === 'blue') blueMeeples--;
             else redMeeples--;
@@ -971,8 +1087,7 @@
                             else if (tileData.meeple.zone === 'left') meeple.style.left = '5px';
                             else if (tileData.meeple.zone === 'right') meeple.style.right = '5px';
                             else if (tileData.meeple.zone === 'center') {
-                                meeple.style.top = '50%';
-                                meeple.style.left = '50%';
+                                meeple.style.top = '50%'; meeple.style.left = '50%';
                                 meeple.style.transform = 'translate(-50%, -50%)';
                             }
                             cell.appendChild(meeple);
@@ -986,14 +1101,14 @@
         // ФИНАЛЬНЫЙ ПОДСЧЁТ
         // ==========================================
         function endGame() {
+            // 1. Незавершённые города
             const roots = new Set();
             for (const seg of allSegments) roots.add(dsu.find(seg));
 
             for (const root of roots) {
-                // Города
                 const citySegs = getObjectSegments(root, 'C');
                 if (citySegs.length > 0 && !isObjectComplete(citySegs, 'C')) {
-                    const owner = getOwner(citySegs, 'C');
+                    const owner = getOwner(citySegs);
                     let pts = citySegs.length;
                     for (const seg of citySegs) {
                         const p = seg.split(',');
@@ -1002,18 +1117,32 @@
                     }
                     if (owner === 'blue') bluePoints += pts;
                     if (owner === 'red') redPoints += pts;
+
+                    // Связь с фермами
+                    for (const seg of citySegs) {
+                        const p = seg.split(',');
+                        const rr = parseInt(p[0]), cc = parseInt(p[1]), cs = p[2];
+                        const t = carBoardData[rr][cc];
+                        const adj = t.cityFarmAdj || [];
+                        for (const [adjCitySide, adjFarmSide] of adj) {
+                            if (adjCitySide !== cs) continue;
+                            const fkey = farmSegKey(rr, cc, adjFarmSide);
+                            if (farmDsu.parent[fkey] !== undefined) {
+                                cityFarmLinks.push({ cityRoot: root, farmRoot: farmDsu.find(fkey) });
+                            }
+                        }
+                    }
                 }
 
-                // Дороги
                 const roadSegs = getObjectSegments(root, 'R');
                 if (roadSegs.length > 0 && !isObjectComplete(roadSegs, 'R')) {
-                    const owner = getOwner(roadSegs, 'R');
+                    const owner = getOwner(roadSegs);
                     if (owner === 'blue') bluePoints += roadSegs.length;
                     if (owner === 'red') redPoints += roadSegs.length;
                 }
             }
 
-            // Монастыри
+            // 2. Монастыри (незавершённые)
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
                     const tile = carBoardData[r][c];
@@ -1036,6 +1165,51 @@
                 }
             }
 
+            // 3. ФЕРМЫ (только в конце игры)
+            // Подсчитываем: для каждой фермы — сколько завершённых городов к ней прилегает
+            // Учитываем и завершённые в игре, и завершённые "финально" (незавершённые города тоже дают 3 очка? НЕТ — по правилам только завершённые)
+            // Официально: ферма даёт 3 очка за каждый завершённый город, к которому она прилегает.
+            // Незавершённые города не считаются.
+            const farmCityCount = {}; // farmRoot -> Set of cityRoots (завершённые)
+            for (const link of cityFarmLinks) {
+                if (!finishedCityRoots.has(link.cityRoot)) continue; // только завершённые в игре
+                if (!farmCityCount[link.farmRoot]) farmCityCount[link.farmRoot] = new Set();
+                farmCityCount[link.farmRoot].add(link.cityRoot);
+            }
+
+            // Собираем все уникальные корни ферм
+            const farmRoots = new Set();
+            for (const seg of allFarmSegments) farmRoots.add(farmDsu.find(seg));
+
+            for (const farmRoot of farmRoots) {
+                const cities = farmCityCount[farmRoot] ? farmCityCount[farmRoot].size : 0;
+                if (cities === 0) continue;
+
+                // Владелец фермы — по большинству крестьян
+                const counts = { blue: 0, red: 0 };
+                const seen = new Set();
+                for (const seg of allFarmSegments) {
+                    if (farmDsu.find(seg) !== farmRoot) continue;
+                    const p = seg.split(',');
+                    const rr = parseInt(p[1]), cc = parseInt(p[2]), side = p[3];
+                    const key = `${rr},${cc},${side}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    const t = carBoardData[rr][cc];
+                    if (t && t.meeple && t.meeple.zone === side) {
+                        counts[t.meeple.color] += 1;
+                    }
+                }
+                const pts = cities * 3;
+                if (counts.blue > counts.red && pts > 0) bluePoints += pts;
+                else if (counts.red > counts.blue && pts > 0) redPoints += pts;
+                else if (counts.blue > 0 && counts.blue === counts.red && pts > 0) {
+                    // ничья — по правилам оба получают полные очки
+                    bluePoints += pts;
+                    redPoints += pts;
+                }
+            }
+
             updateUI();
             renderCarBoard();
 
@@ -1051,6 +1225,7 @@
                 <div class="score-line" style="margin-top:20px;">${resultText}</div>
             `;
             document.getElementById('final-score-screen').style.display = 'flex';
+            addLog(`🏁 Игра окончена. Синие: ${bluePoints}, Красные: ${redPoints}`);
         }
 
         function closeFinalScreen() {
